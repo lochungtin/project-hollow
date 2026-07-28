@@ -1,0 +1,10 @@
+fastapi>=0.110
+uvicorn[standard]>=0.29
+pydicom>=2.4
+numpy>=1.26
+scipy>=1.11
+scikit-image>=0.22
+Pillow>=10.0
+python-multipart>=0.0.9
+websockets>=12.0
+guava-rt>=0.5.0
