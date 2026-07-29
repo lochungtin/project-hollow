@@ -13,7 +13,6 @@ const Toolbar = () => {
                 </span>
                 <span className='toolbar-subtitle'>Powered by Guava-RT</span>
             </div>
-
             <div className='toolbar-status'>
                 <div className='toolbar-pill'>
                     <span>CUDA</span>

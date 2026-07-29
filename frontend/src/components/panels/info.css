@@ -215,7 +215,7 @@
 }
 
 .info-contour-name {
-    width: 100px;
+    width: 95px;
     overflow: hidden;
     color: var(--text);
     text-align: start;

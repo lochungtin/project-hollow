@@ -1,4 +1,99 @@
+.data-pane-root {
+    position: relative;
+}
+
 .data-pane {
+    display: flex;
+    position: relative;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 1;
+    transition: 0.5s;
     border-left: 1px solid var(--border);
+    padding: 10px;
     width: 500px;
+    height: 100vh;
+}
+
+.data-pane-closed {
+    content-visibility: hidden;
+    transition: 0.5s;
+    width: 10px;
+}
+
+
+.data-pane-toggle {
+    display: flex;
+    position: absolute;
+    top: 50%;
+    left: -15px;
+    justify-content: center;
+    align-items: center;
+    opacity: 0.6;
+    z-index: 2;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--panel-alt);
+    width: 30px;
+    height: 45px;
+    overflow: hidden;
+}
+
+.data-pane-toggle:hover {
+    opacity: 1;
+    border-color: var(--accent-dim);
+}
+
+.data-pane-toggle-img {
+    transition: 0.5s;
+    width: 30px;
+    height: 30px;
+}
+
+.data-pane-toggle-img-rotated {
+    rotate: 180deg;
+}
+
+.data-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--panel-alt);
+}
+
+.data-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border-soft);
+    padding: 9px 10px;
+}
+
+.data-card-badge {
+    width: 40px;
+    color: var(--text-dim);
+}
+
+.data-card-title {
+    flex: 1;
+    overflow: hidden;
+    font-weight: 600;
+    font-size: 12.5px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.data-card-chev {
+    cursor: pointer;
+    margin-right: 10px;
+    border: none;
+    background: none;
+    width: 15px;
+    height: 15px;
+}
+
+.data-card-chev-img {
+    width: 15px;
+    height: 15px;
 }

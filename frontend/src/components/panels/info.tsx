@@ -1,9 +1,13 @@
 import Anchor from '../../icons/anchor.svg'
 import Close from '../../icons/close.svg'
+import DMap from '../../icons/dmap.svg'
 import Select from '../../icons/select.svg'
 import Target from '../../icons/target.svg'
 import './info.css'
 
+
+const contours = ['Body', 'Breast_L', 'Breast_R', 'Esophagus', 'Heart', 'Lung_L', 'Lung_R', 'Spinal_Canal']
+// const contours = []
 
 const ContentEmpty = () => {
     return (
@@ -52,7 +56,7 @@ const ContentLoaded = () => {
                     </div>
                     <button className='info-anchor-set'>Set Anchor</button>
                 </div>
-                <button className='info-dcm-upload'>Load RTSTRUCT</button>
+                {1 ? <span>Contours</span> : <button className='info-dcm-upload'>Load RTSTRUCT</button>}
             </main>
             {1 ? ContourList() : <footer className='info-card-footer'>Load contours for more options.</footer>}
         </>
@@ -60,7 +64,6 @@ const ContentLoaded = () => {
 }
 
 const ContourList = () => {
-    const contours = ['Body', 'Breast_L', 'Breast_R', 'Esophagus', 'Heart', 'Lung_L', 'Lung_R', 'Spinal_Canal']
     return (
         <div className='info-contour-container'>
             {contours.map((c, i) => {
@@ -78,6 +81,9 @@ const ContourList = () => {
                         </button>
                         <button className='info-contour-action'>
                             <img className='info-contour-action-img'src={Select} alt="S"/>
+                        </button>
+                        <button className='info-contour-action'>
+                            <img className='info-contour-action-img'src={DMap} alt="D"/>
                         </button>
                     </div>
                 </button>
