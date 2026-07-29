@@ -1,0 +1,89 @@
+.infopane-root {
+    overflow-y: auto;
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: column;
+    gap: 10px;
+    
+    width: 300px;
+    padding: 10px;
+
+    border-right: 1px solid var(--border);
+}
+.infopane-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--panel-alt);
+}
+.infopane-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    padding: 9px 10px;
+    cursor: pointer;
+
+    border-bottom: 1px solid var(--border-soft);
+}
+.infopane-card-badge {
+    color: var(--accent);
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    height: 18px;
+    width: 18px;
+
+    border-radius: var(--radius);
+    background-color: var(--accent-faint);
+}
+.infopane-card-name {
+    font-size: 12.5px;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap; 
+
+    flex: 1;
+
+    overflow: hidden;
+}
+.infopane-card-tag {
+    font-family: var(--mono);
+    font-size: 8px;
+
+    padding: 3px 8px;
+
+    border-radius: 100vh;
+    border: 1px solid var(--accent-dim);
+}
+.infopane-card-body {
+    display: flex;
+    flex-direction: column;
+
+    padding: 9px 10px;
+}
+.infopane-card-dcm-upload {
+    color: var(--text);
+    padding: 8px 10px;
+
+    border-radius: var(--radius);
+    border: none;
+    background-color: var(--accent-dim);
+}
+.infopane-card-meta {
+    
+}
+.infopane-card-footer {
+    font-size: 10.5px;
+    color: var(--text-dim);
+
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    padding: 9px 10px;
+    cursor: pointer;
+
+    border-top: 1px solid var(--border-soft);
+}

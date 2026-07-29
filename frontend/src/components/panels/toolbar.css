@@ -1,0 +1,45 @@
+.toolbar-root {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+
+    padding: 10px 16px;
+
+    border-bottom: 1px solid var(--border);
+}
+.toolbar-brand {
+    display: flex;
+    flex-direction: column;
+
+    margin-right: 8px; 
+}
+.toolbar-title {
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.02em;
+}
+.toolbar-subtitle {
+    font-size: 10.5px;
+    color: var(--text-faint);
+    margin-top: 4px;
+}
+.toolbar-status {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.toolbar-pill {
+    font-family: var(--mono);
+    font-size: 10.5px;
+
+    padding: 3px 8px;
+
+    border: 1px solid var(--accent-dim);
+    border-radius: 100vh;
+}
+.toolbar-hints {
+    font-size: 10.5px;
+    color: var(--text-dim);
+}

@@ -1,3 +1,5 @@
+import './toolbar.css'
+
 // STATE INTEGRATION
 
 const Toolbar = () => {
