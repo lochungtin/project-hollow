@@ -1,8 +1,22 @@
-const DataPanel = () => {
+import './data.css'
+
+
+const TabularCard = ({title} : {title: string}) => {
     return (
-        <div>
-        </div>
+        <section>
+            <span>{title}</span>
+        </section>
     )
 }
 
-export default DataPanel
+const DataPane = () => {
+    return (
+        <aside className='data-pane'>
+            <TabularCard title="Volume" />
+            <TabularCard title="Surface Area" />
+            <TabularCard title="Surface Discrepancy" />
+        </aside>
+    )
+}
+
+export default DataPane

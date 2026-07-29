@@ -1,0 +1,11 @@
+.view-pane {
+    display: flex;
+    flex: 1;
+    opacity: 0.5;
+    background-image: repeating-linear-gradient(45deg,
+            var(--accent-faint) 0,
+            var(--accent-faint) 3px,
+            transparent 0,
+            transparent 50%);
+    background-size: 30px 30px;
+}

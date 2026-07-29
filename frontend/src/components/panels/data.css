@@ -1,0 +1,4 @@
+.data-pane {
+    border-left: 1px solid var(--border);
+    width: 500px;
+}

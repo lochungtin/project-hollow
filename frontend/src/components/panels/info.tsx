@@ -4,6 +4,7 @@ import Select from '../../icons/select.svg'
 import Target from '../../icons/target.svg'
 import './info.css'
 
+
 const ContentEmpty = () => {
     return (
         <>

@@ -1,8 +1,11 @@
-const ViewPanel = () => {
+import './view.css'
+
+
+const ViewPane = () => {
     return (
-        <div>
-        </div>
+        <main className='view-pane'>
+        </main>
     )
 }
 
-export default ViewPanel
+export default ViewPane
