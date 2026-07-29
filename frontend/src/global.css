@@ -1,0 +1,106 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+    --bg: #111;
+
+    --panel: #111;
+    --panel-alt: #1a1d26;
+
+    --border: #222;
+    --border-soft: #171717;
+
+    --text: #efefef;
+    --text-dim: #808080;
+    --text-faint: #666;
+
+    --accent: #f2a340;
+    --accent-dim: #8a6431;
+    --accent-cyan: #4fd8e3;
+
+    --danger: #e5595f;
+    --success: #3ecf8e;
+
+    --radius: 3px;
+
+    --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+
+/* -------- Global --------- */
+* { 
+    box-sizing: border-box;
+}
+html, body, #root {
+    height: 100%;
+    margin: 0;
+}
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+}
+.mono {
+    font-family: var(--mono);
+}
+.accent {
+    color: var(--accent);
+}
+
+/* ---------- App ---------- */
+.app-shell {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+    position: relative;
+}
+.app-body {
+    flex: 1;
+    display: flex;
+    min-height: 0;
+}
+
+/* -------- Toolbar -------- */
+.toolbar-root {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 10px 16px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+}
+.toolbar-brand {
+    display: flex;
+    flex-direction: column;
+    margin-right: 8px; 
+}
+.toolbar-title {
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.02em;
+}
+.toolbar-subtitle {
+    font-size: 10.5px;
+    color: var(--text-faint);
+}
+.toolbar-status {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.toolbar-pill {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    border: 1px solid var(--accent-dim);
+    border-radius: 100vh;
+    padding: 3px 8px;
+}
+.toolbar-hints {
+    color: var(--text-dim);
+    font-size: 10.5px;
+}
