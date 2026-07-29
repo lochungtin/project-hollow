@@ -3,8 +3,8 @@
 :root {
     --bg: #111;
 
-    --panel: #111;
-    --panel-alt: #151515;
+    --panel: #131313;
+    --panel-alt: #181818;
 
     --border: #282828;
     --border-soft: #1a1a1a;
@@ -27,40 +27,63 @@
 }
 
 /* -------- Global --------- */
-* { 
+* {
     box-sizing: border-box;
 }
-html, body, #root {
-    height: 100%;
+
+html,
+body,
+#root {
     margin: 0;
+    height: 100%;
 }
+
 body {
     background: var(--bg);
+    color: var(--text);
 
     font-size: 13px;
     font-family: var(--sans);
-    color: var(--text);
     -webkit-font-smoothing: antialiased;
 }
+
 .mono {
     font-family: var(--mono);
 }
+
 .accent {
     color: var(--accent);
 }
 
 .app-shell {
     display: flex;
-    flex-direction: column;
-
-    height: 100vh;
-    width: 100vw;
-
-    overflow: hidden;
     position: relative;
+    flex-direction: column;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
 }
+
 .app-body {
     display: flex;
     flex: 1;
     min-height: 0;
+}
+
+::-webkit-scrollbar {
+    width: 10px;
+}
+
+::-webkit-scrollbar-track {
+    border: none;
+    background-color: var(--panel);
+}
+
+::-webkit-scrollbar-thumb {
+    border-radius: var(--radius);
+    background: #222;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #333;
 }

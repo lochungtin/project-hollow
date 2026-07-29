@@ -1,45 +1,46 @@
 .toolbar-root {
-    flex: 0 0 auto;
     display: flex;
-    align-items: center;
+    flex: 0 0 auto;
     justify-content: space-between;
+    align-items: center;
     gap: 20px;
-
-    padding: 10px 16px;
-
     border-bottom: 1px solid var(--border);
+    padding: 10px 16px;
 }
+
 .toolbar-brand {
     display: flex;
     flex-direction: column;
-
-    margin-right: 8px; 
+    margin-right: 8px;
 }
+
 .toolbar-title {
     font-weight: 600;
     font-size: 13px;
     letter-spacing: 0.02em;
 }
+
 .toolbar-subtitle {
-    font-size: 10.5px;
-    color: var(--text-faint);
     margin-top: 4px;
+    color: var(--text-faint);
+    font-size: 10.5px;
 }
+
 .toolbar-status {
     display: flex;
     align-items: center;
     gap: 12px;
 }
+
 .toolbar-pill {
-    font-family: var(--mono);
-    font-size: 10.5px;
-
-    padding: 3px 8px;
-
     border: 1px solid var(--accent-dim);
     border-radius: 100vh;
-}
-.toolbar-hints {
+    padding: 3px 8px;
     font-size: 10.5px;
+    font-family: var(--mono);
+}
+
+.toolbar-hints {
     color: var(--text-dim);
+    font-size: 10.5px;
 }
