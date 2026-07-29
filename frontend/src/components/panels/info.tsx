@@ -7,8 +7,8 @@ import './info.css'
 const ContentEmpty = () => {
     return (
         <>
-            <main className='card-body'>
-                <button className='dcm-upload'>
+            <main className='info-card-body'>
+                <button className='info-dcm-upload'>
                     Load DICOM Series
                 </button>
                 <input 
@@ -16,7 +16,7 @@ const ContentEmpty = () => {
                     onChange={(e) => {}}
                 />
             </main>
-            <footer className='card-footer'>
+            <footer className='info-card-footer'>
                 Select every file in the dicom series.
             </footer>
         </>
@@ -26,34 +26,34 @@ const ContentEmpty = () => {
 const ContentLoaded = () => {
     return (
         <>
-            <main className='card-body'>
-                <dl className='meta'>
-                    <dt>Modality</dt><dd className='mono'>MR</dd>
-                    <dt>Shape</dt><dd className='mono'>133 x 200 x 200</dd>
-                    <dt>Spacing</dt><dd className='mono'>2.00 x 2.00 x 2.00 mm</dd>
+            <main className='info-card-body'>
+                <dl className='info-meta'>
+                    <dt>Modality</dt><dd className='info-mono'>MR</dd>
+                    <dt>Shape</dt><dd className='info-mono'>133 x 200 x 200</dd>
+                    <dt>Spacing</dt><dd className='info-mono'>2.00 x 2.00 x 2.00 mm</dd>
                 </dl>
-                <div className='anchor-container'>
-                    <div className='anchor-row'>
-                        <span className='anchor-label'>Anchor (mm)</span>
-                        <div className='anchor-controls'>
-                            <input className='anchor-input mono'/>
-                            <input className='anchor-input mono'/>
-                            <input className='anchor-input mono'/>
+                <div className='info-anchor-container'>
+                    <div className='info-anchor-row'>
+                        <span className='info-anchor-label'>Anchor (mm)</span>
+                        <div className='info-anchor-controls'>
+                            <input className='info-anchor-input mono'/>
+                            <input className='info-anchor-input mono'/>
+                            <input className='info-anchor-input mono'/>
                         </div>
                     </div>
-                    <div className='anchor-row'>
-                        <span className='anchor-label'>Anchor (px)</span>
-                        <div className='anchor-controls'>
-                            <input className='anchor-input mono'/>
-                            <input className='anchor-input mono'/>
-                            <input className='anchor-input mono'/>
+                    <div className='info-anchor-row'>
+                        <span className='info-anchor-label'>Anchor (px)</span>
+                        <div className='info-anchor-controls'>
+                            <input className='info-anchor-input mono'/>
+                            <input className='info-anchor-input mono'/>
+                            <input className='info-anchor-input mono'/>
                         </div>
                     </div>
-                    <button className='anchor-set'>Set Anchor</button>
+                    <button className='info-anchor-set'>Set Anchor</button>
                 </div>
-                <button className='dcm-upload'>Load RTSTRUCT</button>
+                <button className='info-dcm-upload'>Load RTSTRUCT</button>
             </main>
-            {1 ? ContourList() : <footer className='card-footer'>Load contours for more options.</footer>}
+            {1 ? ContourList() : <footer className='info-card-footer'>Load contours for more options.</footer>}
         </>
     )
 }
@@ -61,22 +61,22 @@ const ContentLoaded = () => {
 const ContourList = () => {
     const contours = ['Body', 'Breast_L', 'Breast_R', 'Esophagus', 'Heart', 'Lung_L', 'Lung_R', 'Spinal_Canal']
     return (
-        <div className='contour-container'>
+        <div className='info-contour-container'>
             {contours.map((c, i) => {
-                return <button key={i} className='contour-item'>
-                    <div className={`contour-label ${i % 7 ? 'contour-label-active' : ''}`}>
-                        <div className='contour-badge'></div>
-                        <span className='contour-name'>{c}</span>
+                return <button key={i} className='info-contour-item'>
+                    <div className={`info-contour-label ${i % 7 ? 'info-contour-label-active' : ''}`}>
+                        <div className='info-contour-badge'></div>
+                        <span className='info-contour-name'>{c}</span>
                     </div>
-                    <div className='contour-action-container'>
-                        <button className='contour-action'>
-                            <img className='contour-action-img'src={Anchor} alt="A"/>
+                    <div className='info-contour-action-container'>
+                        <button className='info-contour-action'>
+                            <img className='info-contour-action-img'src={Anchor} alt="A"/>
                         </button>
-                        <button className='contour-action'>
-                            <img className='contour-action-img'src={Target} alt="T"/>
+                        <button className='info-contour-action'>
+                            <img className='info-contour-action-img'src={Target} alt="T"/>
                         </button>
-                        <button className='contour-action'>
-                            <img className='contour-action-img'src={Select} alt="S"/>
+                        <button className='info-contour-action'>
+                            <img className='info-contour-action-img'src={Select} alt="S"/>
                         </button>
                     </div>
                 </button>
@@ -87,13 +87,13 @@ const ContourList = () => {
 
 const Card = ({slot}: {slot: string}) => {
     return (
-        <section className={`card ${1 ? 'card-active' : ''}`}>
-            <header className='card-header'>
-                <span className='card-badge'>{slot}</span>
-                <span className='card-name'>{1 ? `Dataset ${slot}` : 'Empty Slot'}</span>
-                <span className='card-tag'>Active</span>
-                <button className='card-close'>
-                   <img className='card-close-img' src={Close} alt='close' />
+        <section className={`info-card ${1 ? 'info-card-active' : ''}`}>
+            <header className='info-card-header'>
+                <span className='info-card-badge'>{slot}</span>
+                <span className='info-card-name'>{1 ? `Dataset ${slot}` : 'Empty Slot'}</span>
+                <span className='info-card-tag'>Active</span>
+                <button className='info-card-close'>
+                   <img className='info-card-close-img' src={Close} alt='close' />
                 </button>
             </header>
             {1 ? ContentLoaded() : ContentEmpty()}
@@ -103,7 +103,7 @@ const Card = ({slot}: {slot: string}) => {
 
 const InfoPane = () => {
     return (
-        <nav className='pane'>
+        <nav className='info-pane'>
             <Card slot='A' />
             <Card slot='B' />
         </nav>

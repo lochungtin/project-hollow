@@ -1,4 +1,4 @@
-.pane {
+.info-pane {
     display: flex;
     flex: 0 0 auto;
     flex-direction: column;
@@ -9,17 +9,17 @@
     overflow-y: auto;
 }
 
-.card {
+.info-card {
     border: 1px solid var(--border);
     border-radius: var(--radius);
     background: var(--panel-alt);
 }
 
-.card-active {
+.info-card-active {
     border-color: var(--accent-dim);
 }
 
-.card-header {
+.info-card-header {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -28,7 +28,7 @@
     padding: 9px 10px;
 }
 
-.card-badge {
+.info-card-badge {
     display: flex;
     justify-content: center;
     align-items: center;
@@ -39,7 +39,7 @@
     color: var(--accent);
 }
 
-.card-name {
+.info-card-name {
     flex: 1;
     overflow: hidden;
     font-weight: 600;
@@ -48,7 +48,7 @@
     white-space: nowrap;
 }
 
-.card-tag {
+.info-card-tag {
     border: 1px solid var(--accent-dim);
     border-radius: 100vh;
     padding: 3px 8px;
@@ -56,30 +56,30 @@
     font-family: var(--mono);
 }
 
-.card-close {
+.info-card-close {
     opacity: 0.3;
     cursor: pointer;
     border: none;
     background: none
 }
 
-.card-close:hover {
+.info-card-close:hover {
     opacity: 1;
 }
 
-.card-close-img {
+.info-card-close-img {
     width: 10px;
     height: 10px;
 }
 
-.card-body {
+.info-card-body {
     display: flex;
     flex-direction: column;
     gap: 10px;
     padding: 9px 10px;
 }
 
-.card-footer {
+.info-card-footer {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -90,7 +90,7 @@
     font-size: 10.5px;
 }
 
-.dcm-upload {
+.info-dcm-upload {
     cursor: pointer;
     border: none;
     border-radius: var(--radius);
@@ -99,12 +99,12 @@
     color: var(--text);
 }
 
-.dcm-upload:hover {
+.info-dcm-upload:hover {
     background-color: var(--accent);
     color: var(--bg);
 }
 
-.meta {
+.info-meta {
     display: grid;
     grid-template-columns: auto 1fr;
     gap: 2px 10px;
@@ -112,41 +112,41 @@
     font-size: 11px;
 }
 
-.meta dt {
+.info-meta dt {
     color: var(--text-faint);
 }
 
-.meta dd {
+.info-meta dd {
     margin: 0;
     color: var(--text-dim);
 }
 
-.anchor-container {
+.info-anchor-container {
     display: flex;
     flex-direction: column;
     gap: 5px;
     margin: 5px 0;
 }
 
-.anchor-row {
+.info-anchor-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
 
-.anchor-label {
+.info-anchor-label {
     color: var(--text-dim);
     font-size: 11px;
 }
 
-.anchor-controls {
+.info-anchor-controls {
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 5px;
 }
 
-.anchor-input {
+.info-anchor-input {
     border: 1px solid var(--border);
     border-radius: var(--radius);
     background-color: transparent;
@@ -156,11 +156,11 @@
     font-size: 12px;
 }
 
-.anchor-input:hover {
+.info-anchor-input:hover {
     border-color: var(--accent-faint);
 }
 
-.anchor-set {
+.info-anchor-set {
     cursor: pointer;
     border: 1px solid var(--border);
     border-radius: var(--radius);
@@ -169,18 +169,18 @@
     color: var(--text);
 }
 
-.anchor-set:hover {
+.info-anchor-set:hover {
     border-color: var(--accent-dim);
 }
 
-.contour-container {
+.info-contour-container {
     display: flex;
     flex-direction: column;
     gap: 8px;
     padding: 9px 10px;
 }
 
-.contour-item {
+.info-contour-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -192,29 +192,29 @@
     color: var(--text);
 }
 
-.contour-item:hover {
+.info-contour-item:hover {
     border-color: var(--accent-faint);
 }
 
-.contour-label {
+.info-contour-label {
     display: flex;
     align-items: center;
     gap: 10px;
     opacity: 0.2;
 }
 
-.contour-label-active {
+.info-contour-label-active {
     opacity: 1;
 }
 
-.contour-badge {
+.info-contour-badge {
     border-radius: var(--radius);
     background-color: var(--accent);
     width: 20px;
     height: 11px;
 }
 
-.contour-name {
+.info-contour-name {
     width: 100px;
     overflow: hidden;
     color: var(--text);
@@ -222,12 +222,12 @@
     text-overflow: ellipsis;
 }
 
-.contour-action-container {
+.info-contour-action-container {
     display: flex;
     gap: 5px;
 }
 
-.contour-action {
+.info-contour-action {
     display: flex;
     justify-content: center;
     align-items: center;
@@ -241,11 +241,11 @@
     color: var(--accent);
 }
 
-.contour-action:hover {
+.info-contour-action:hover {
     border-color: var(--accent-dim);
 }
 
-.contour-action-img {
+.info-contour-action-img {
     opacity: 0.5;
     width: 15px;
     height: 15px;
