@@ -17,11 +17,12 @@ const ContentEmpty = (slot: string) => {
     // --- UPLOAD DICOM FILES
     const _onClickDcmUpload = (e: any, slot: string) => {
         console.log('_onClickUpload', slot)
-        // dicomUploadRef.current?.click()
+        if (dicomUploadRef.current)
+            dicomUploadRef.current.click()
     }
 
     const _onDcmUpload = (e: any, slot: string) => {
-        console.log('_onUpload', slot)
+        console.log('_onUpload', slot, e.target.files.length)
     }
 
     return (

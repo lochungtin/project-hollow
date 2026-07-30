@@ -9,6 +9,7 @@ const contours = ['Body', 'Breast_L', 'Breast_R', 'Esophagus', 'Heart', 'Lung_L'
 
 const Card = ({badge, title} : {badge: string, title: string}) => {
     const [showing, setShowing] = useState(true)
+    
     return (
         <section className='data-card'>
             <header className='data-card-header'>
@@ -31,7 +32,8 @@ const Figure = () => {
 }
 
 const DataPane = () => {
-    const [open, setOpen] = useState(true)
+    const [open, setOpen] = useState(false)
+
     return (
         <aside className='data-pane-root'>
             <button className='data-pane-toggle' onClick={(e) => setOpen(!open)}>

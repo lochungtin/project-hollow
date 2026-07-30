@@ -1,9 +1,11 @@
+import { useAppState } from '../../state'
 import './toolbar.css'
-
 
 // STATE INTEGRATION
 
 const Toolbar = () => {
+    const state = useAppState()
+
     return (
         <header className='toolbar-root'>
             <div className='toolbar-brand'>
@@ -15,7 +17,7 @@ const Toolbar = () => {
             </div>
             <div className='toolbar-status'>
                 <div className='toolbar-pill'>
-                    <span>CUDA</span>
+                    <span>{state.device.toUpperCase()}</span>
                 </div>                
                 <span className='toolbar-hints mono'>
                     [Tab] dataset &middot;
