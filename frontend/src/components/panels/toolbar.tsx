@@ -1,7 +1,6 @@
 import { useAppState } from '../../state'
 import './toolbar.css'
 
-// STATE INTEGRATION
 
 const Toolbar = () => {
     const state = useAppState()

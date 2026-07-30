@@ -1,6 +1,6 @@
 from pathlib import Path
 
-# from app.api import routes_datasets, routes_jobs, routes_ws
+from app.api.dataset import router as data_router
 from app.api.jobs import router as job_router
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,7 +16,7 @@ app.add_middleware(
 )
 
 app.include_router(job_router)
-# app.include_router(routes_datasets.router)
+app.include_router(data_router)
 # app.include_router(routes_ws.router)
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent

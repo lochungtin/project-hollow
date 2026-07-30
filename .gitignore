@@ -10,3 +10,4 @@ frontend/*.tsbuildinfo
 frontend/dist/
 
 plans/
+data/
