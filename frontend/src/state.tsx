@@ -2,7 +2,7 @@ import { createContext, useContext } from 'react'
 
 interface AppStateValue {}
 
-const AppStateContext = createContext<AppStateValue | null>(null)
+const AppStateContext = createContext<AppStateValue | null>({})
 
 export function useAppState(): AppStateValue {
 	const ctx = useContext(AppStateContext)

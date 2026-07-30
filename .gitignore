@@ -7,5 +7,6 @@ frontend/node_modules/
 frontend/.tsbuild-out/
 frontend/*.tsbuildinfo
 *.log
+frontend/dist/
 
 plans/
