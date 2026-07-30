@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import { getDeviceAPI, uploadDicomAPI } from './api/client'
+import { deleteDicomAPI, getDeviceAPI, uploadDicomAPI } from './api/client'
 
 
 const AppStateContext = createContext<any>({})
@@ -24,6 +24,8 @@ export const AppStateProvider = ({ children }: { children: any })  => {
 		return () => {}
 	}, [])
 
+
+	// --- FILE UPLOAD
 	const uploadDicom = useCallback(async (slot: string, files: File[]) => {
 		setUploading({...uploading, [slot]: true})
 		try {
@@ -37,14 +39,28 @@ export const AppStateProvider = ({ children }: { children: any })  => {
 		}
 	}, [])
 
+	const uploadRTStruct = useCallback(async (slot: string)=> {
+		
+	}, []) 
+
+	const deleteDicom = useCallback(async (slot: string)=> {
+		try {
+			await deleteDicomAPI(slot)
+			setDataset((prev) => ({ ...prev, [slot]: null }))
+			setHaveContours((prev) => ({ ...prev, [slot]: false }))
+		} catch (err) {
+			console.error(err)
+		}		
+	}, []) 
+
 
 	const value = useMemo(() => ({
 		device,
-		uploading, uploadDicom,
+		uploading, uploadDicom, deleteDicom,
 		dataset, haveContours,
 	}), [
 		device,
-		uploading, uploadDicom,
+		uploading, uploadDicom, deleteDicom,
 		dataset, haveContours,
 	])
 

@@ -1,5 +1,5 @@
-const get = async (path: string) => {
-    const res = await fetch(path)
+const _base_api = async(path: string, header?: any) => {
+    const res = await fetch(path, header)
     
     if (!res.ok) {
         let detail = res.statusText
@@ -15,34 +15,21 @@ const get = async (path: string) => {
     return res.json()
 }
 
-const put = async (path: string) => {
+const _get = async (path: string) => _base_api(path)
 
-}
+const _post = async (path: string, body: any) => _base_api(path, { method: 'POST', body: body })
 
-const post = async (path: string, body: any) => {
-    const res = await fetch(path, { method: 'POST', body: body })
+const _put = async (path: string, body: any) => _base_api(path, { method: 'PUT', body: body })
 
-    if (!res.ok) {
-        let detail = res.statusText
-        try {
-            const body = await res.json()
-            detail = body.detail ? JSON.stringify(body.detail) : JSON.stringify(body)
-        } catch (err) {
-            console.error(err)
-        }
-        throw new Error(`${res.status}: ${detail}`)
-    }
+const _del = async (path: string) => _base_api(path, {method: 'DELETE'})
 
-    if (res.status === 204)
-        return undefined
 
-    return res.json()
-}
-
-export const getDeviceAPI = () => get('api/device')
+export const getDeviceAPI = () => _get('api/device')
 
 export const uploadDicomAPI = (slot: string, files: FileList | File[]) => {
     const body = new FormData()    
     Array.from(files).forEach((f) => body.append('files', f))
-    return post(`api/${slot}/dicom`, body)
+    return _post(`api/${slot}/dicom`, body)
 }
+
+export const deleteDicomAPI = (slot: string) => _del(`api/${slot}`)

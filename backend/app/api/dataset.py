@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, UploadFile
 
 from ..models.dataset import Dataset
 from ..parser import toScanObj
-from ..storage import setDataset
+from ..storage import clearDataset, setDataset
 
 router = APIRouter(prefix="/api", tags=["datasets"])
 
@@ -19,3 +19,9 @@ async def upload_dicom(slot: str, files: list[UploadFile]):
     setDataset(slot, dataset)
 
     return dataset.summary()
+
+
+@router.delete("/{slot}")
+async def delete_dicom(slot: str):
+    clearDataset(slot)
+    return {"ok": True}

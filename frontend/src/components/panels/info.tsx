@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import Anchor from '../../icons/anchor.svg'
 import Close from '../../icons/close.svg'
 import DMap from '../../icons/dmap.svg'
@@ -215,12 +215,8 @@ const Card = ({slot}: {slot: string}) => {
     // --- CLOSE
     const _onClickClose = (e: any, slot: string) => {
         console.log('_onClickClose', slot)
+        state.deleteDicom(slot)
     }
-
-    useEffect(() => {
-        console.log(`${slot} mounted`);
-        return () => console.log(`${slot} unmounted`);
-    }, []);
 
     return (
         <section className={`info-card ${1 ? 'info-card-active' : ''}`}>
@@ -238,13 +234,6 @@ const Card = ({slot}: {slot: string}) => {
     )
 }
 
-const InfoPane = () => {
-    return (
-        <nav className='info-pane'>
-            <Card slot='A' />
-            <Card slot='B' />
-        </nav>
-    )
-}
+const InfoPane = () => <nav className='info-pane'><Card slot='A' /><Card slot='B' /></nav>
 
 export default InfoPane
