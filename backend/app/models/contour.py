@@ -26,7 +26,7 @@ class Contour:
             "color": list(self.color),
             "visible": self.visible,
             "has_mesh": self.mesh is not None,
-            "volume": self.mask.volume,
-            "surface_area": self.mask.surface_area(),
+            "volume": self.mask.volume.cpu().item(),
+            "surface_area": self.mask.surface_area().cpu().item(),
             "center_of_mass": self.mask.center_of_mass.cpu().numpy().tolist(),
         }
