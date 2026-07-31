@@ -130,9 +130,18 @@
 }
 
 .data-table-row-label {
+    display: flex;
+    align-items: center;
     color: var(--text-dim);
     font: inherit;
     text-align: left;
+}
+
+.data-table-row-label-badge {
+    margin-right: 10px;
+    border-radius: var(--radius);
+    width: 10px;
+    height: 10px;
 }
 
 .data-table-col-label {

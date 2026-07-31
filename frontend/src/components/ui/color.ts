@@ -1,0 +1,1 @@
+export const rgb2hex = (rgb: number[]) => `#${rgb.map(v => v.toString(16).padStart(2, "0")).join("")}`

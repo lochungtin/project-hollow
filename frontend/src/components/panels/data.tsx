@@ -3,6 +3,7 @@ import ChevDown from '../../icons/chev-down.svg'
 import ChevLeft from '../../icons/chev-left.svg'
 import ChevRight from '../../icons/chev-right.svg'
 import { useAppState } from '../../state'
+import { rgb2hex } from '../ui/color'
 import Switch from '../ui/Switch'
 import './data.css'
 
@@ -24,7 +25,17 @@ const Card = ({badge, title, children} : {badge: string, title: string, children
     )
 }
 
-const Table = ({rowNames, colNames, data, scale, setScale, decorator = []}: {rowNames: string[], colNames: string[], data: any[][], scale: boolean, setScale: any, decorator?: number[]}) => {
+const Table = (
+    {rowNames, colNames, data, colors, scale, setScale, decorator = []}: 
+    {   rowNames: string[], 
+        colNames: string[],
+        data: any[][],
+        colors: number[][], 
+        scale: boolean,
+        setScale: any,
+        decorator?: number[]
+    }
+) => {
     const handleChange = (e: any) => setScale(e.target.checked)
 
     return (<table className='data-table'>
@@ -46,7 +57,10 @@ const Table = ({rowNames, colNames, data, scale, setScale, decorator = []}: {row
         </tbody>
         {data.map((row, i) => {
             return (<tbody key={i}><tr className='data-table-row'>
-                <th className='data-table-row-label'>{rowNames[i]}</th>
+                <th className='data-table-row-label'>
+                    <div className='data-table-row-label-badge' style={{backgroundColor: rgb2hex(colors[i])}}></div>
+                    <span>{rowNames[i]}</span>
+                </th>
                 {row.map((cell, j) => {
                     let _cell = cell
                     let decor = ''
@@ -76,15 +90,23 @@ const Figure = () => {
 }
 
 
-const parseContoursNumDiff = (A: any, B: any, field: string, scaleA: number, scaleB: number, doScale: boolean) => {
+const parseContoursNumDiff = (
+    A: any,
+    B: any, 
+    field: string,
+    scaleA: number,
+    scaleB: number,
+    doScale: boolean
+) => {
     scaleA = doScale ? scaleA : 1
     scaleB = doScale ? scaleB : 1
 
     const rt: any = {}
+    const colors: number[][] = []
     
     Object.values(A).forEach((c: any) => {
-        if (!(c.name in rt))
-            rt[c.name] = {'A': c[field] / scaleA, 'B': '-', 'abs': '-', 'perc': '-'}
+        rt[c.name] = {'A': c[field] / scaleA, 'B': '-', 'abs': '-', 'perc': '-'}
+        colors.push(c.color)
     })
     Object.values(B).forEach((c: any) => {
         if (!(c.name in rt))
@@ -93,10 +115,12 @@ const parseContoursNumDiff = (A: any, B: any, field: string, scaleA: number, sca
             rt[c.name]['B'] = c[field] / scaleB
             rt[c.name]['abs'] = rt[c.name]['B'] - rt[c.name]['A']
             rt[c.name]['perc'] = rt[c.name]['abs'] / rt[c.name]['A'] * 100
+            colors.push(c.color)
         }
             
     })
     return {
+        'colors': colors,
         'rowNames': Object.keys(rt),
         'colNames': ['Dataset A', 'Dataset B', 'Abs Diff', '% Diff'],
         'data': Object.values(rt).map((grp: any) => Object.values(grp))

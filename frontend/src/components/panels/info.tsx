@@ -5,6 +5,7 @@ import DMap from '../../icons/dmap.svg'
 import Select from '../../icons/select.svg'
 import Target from '../../icons/target.svg'
 import { useAppState } from '../../state'
+import { rgb2hex } from '../ui/color'
 import './info.css'
 
 
@@ -152,8 +153,6 @@ const ContentLoaded = ({slot}: {slot: string}) => {
         console.log('_onClickContourDMap', slot, id)
         e.stopPropagation()
     }
-
-    const rgb2hex = (rgb: number[]) => `#${rgb.map(v => v.toString(16).padStart(2, "0")).join("")}`
 
     return (
         <>
