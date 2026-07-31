@@ -33,7 +33,7 @@ export const AppStateProvider = ({ children }: { children: any })  => {
 		try {
 			const ds = await uploadDicomAPI(slot, files)
 
-			const lAnchorMM = ds.anchor.map((x: number) => x / ds.scan.spacing[0])
+			const lAnchorMM = ds.anchor.map((x: number) => Math.round(x / ds.scan.spacing[0]))
 			const lAnchorPX = ds.anchor
 
 			setDataset((prev) => ({...prev, [slot]: ds}))
@@ -93,7 +93,14 @@ export const AppStateProvider = ({ children }: { children: any })  => {
 	const updateAnchor = useCallback(async (slot: string, anchor: number[]) => {
 		try {
 			const ds = await updateAnchorAPI(slot, anchor)
+
+			const lAnchorMM = ds.anchor.map((x: number) => Math.round(x / ds.scan.spacing[0]))
+			const lAnchorPX = ds.anchor
+
 			setDataset((prev) => ({...prev, [slot]: ds}))
+			setLocalAnchorMM((prev) => ({...prev, [slot]: lAnchorMM}))
+			setLocalAnchorPX((prev) => ({...prev, [slot]: lAnchorPX}))
+
 		} catch (err) {
 			console.error(JSON.stringify(err))
 		}

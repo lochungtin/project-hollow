@@ -138,8 +138,7 @@ const ContentLoaded = ({slot}: {slot: string}) => {
         console.log('_onClickContourAnchor', slot, id)
 
         const current = state.dataset[slot].contours[id].center_of_mass
-        console.log(current)
-        state.updateAnchor(slot, current[0], current[1], current[2])
+        state.updateAnchor(slot, current)
     }
     const _onClickContourTarget = (e: any, slot: string, id: number) => {
         console.log('_onClickContourTarget', slot, id)
