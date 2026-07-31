@@ -1,13 +1,15 @@
-from fastapi import APIRouter, HTTPException, Request, UploadFile
-from pydantic import BaseModel
+import numpy as np
+from fastapi import APIRouter, HTTPException, UploadFile
 
 from ..models.dataset import Dataset
 from ..parser import toContourObjs, toScanObj
 from ..storage import clearDataset, getDataset, setDataset
+from .payload import AnchorPayload, VisibilityPayload
 
 router = APIRouter(prefix="/api", tags=["datasets"])
 
 
+# --- DATASET
 @router.post("/{slot}/dicom")
 async def upload_dicom(slot: str, files: list[UploadFile]):
     contents = [await f.read() for f in files]
@@ -44,10 +46,7 @@ async def delete_dataset(slot: str):
     return {"ok": True}
 
 
-class VisibilityPayload(BaseModel):
-    visibility: bool
-
-
+# --- VISIBILITY
 @router.put("/{slot}/scan/visibility")
 def update_scan_visibility(slot: str, body: VisibilityPayload):
     dataset = getDataset(slot)
@@ -59,4 +58,12 @@ def update_scan_visibility(slot: str, body: VisibilityPayload):
 def update_scan_visibility(slot: str, id: str, body: VisibilityPayload):
     dataset = getDataset(slot)
     dataset.contours[id].visible = body.visibility
+    return dataset.summary()
+
+
+# --- ANCHOR
+@router.put("/{slot}/anchor")
+def update_scan_visibility(slot: str, body: AnchorPayload):
+    dataset = getDataset(slot)
+    dataset.anchor = np.asarray([body.x, body.y, body.z]).astype(int)
     return dataset.summary()

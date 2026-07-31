@@ -28,4 +28,5 @@ class Contour:
             "has_mesh": self.mesh is not None,
             "volume": self.mask.volume,
             "surface_area": self.mask.surface_area(),
+            "center_of_mass": self.mask.center_of_mass.cpu().numpy().tolist(),
         }

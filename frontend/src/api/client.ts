@@ -22,6 +22,11 @@ export const updateVisibilityAPI = (slot: string, type: string, visible: boolean
     return _put(`/api/${slot}/${type}/visibility`, payload)
 }
 
+export const updateAnchorAPI = (slot: string, anchor: number[]) => {
+    const payload = {"x": anchor[0], "y": anchor[1], "z": anchor[2]}
+    return _put(`/api/${slot}/anchor`, payload)
+}
+
 
 // --- BASE METHODS
 const _base_api = async(path: string, header?: any) => {

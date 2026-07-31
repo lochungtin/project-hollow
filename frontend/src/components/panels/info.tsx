@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useRef } from 'react'
 import Anchor from '../../icons/anchor.svg'
 import Close from '../../icons/close.svg'
 import DMap from '../../icons/dmap.svg'
@@ -65,9 +65,6 @@ const ContentLoaded = ({slot}: {slot: string}) => {
     const shape = scan.shape.join(' x ')
     const spacing = scan.spacing.map((x: number) => x.toFixed(2)).join(' x ')
 
-    const [anchorMM, setAnchorMM] = useState(ds.anchor.map((x: number) => x / scan.spacing[0]))
-    const [anchorPX, setAnchorPX] = useState(ds.anchor)
-
     // --- UPLOAD RT STRUCT FILES
     const _onClickRTStructUpload = (e: any, slot: string) => {
         console.log('_onRTStructClickUpload', slot)
@@ -90,43 +87,45 @@ const ContentLoaded = ({slot}: {slot: string}) => {
     const _onAnchorMMChange = (e: any, slot: string, axes: number) => {
         console.log('_onAnchorMMChange', slot, axes, e.target.value)
 
-        let temp = [...anchorMM]
+        let temp = [...state.localAnchorMM[slot]]
         temp[axes] = parseFloat(e.target.value)
-        setAnchorMM(temp)
+        state.updateLocalAnchorMM(slot, temp)
     }
     const _onAnchorMMBlur = (e: any, slot: string, axes: number) => {
-        console.log('_onAnchorPXChange', slot, axes, e.target.value)
+        console.log('_onAnchorMMBlur', slot, axes, e.target.value)
 
-        let temp = [...anchorMM]
+        let temp = [...state.localAnchorMM[slot]]
         temp[axes] = parseFloat(e.target.value)
-        setAnchorMM(temp)
+        state.updateLocalAnchorMM(slot, temp)
 
-        let converted = temp.map(v => Math.floor(v / 2))
-        setAnchorPX(converted)
+        let converted = temp.map((v, i) => v * scan.spacing[i])
+        state.updateLocalAnchorPX(slot, converted)
     }
 
     // --- ANCHOR CHANGES PX
     const _onAnchorPXChange = (e: any, slot: string, axes: number) => {
         console.log('_onAnchorPXChange', slot, axes, e.target.value)
 
-        let temp = [...anchorPX]
+        let temp = [...state.localAnchorPX[slot]]
         temp[axes] = parseFloat(e.target.value)
-        setAnchorPX(temp)
+        state.updateLocalAnchorPX(slot, temp)
     }
     const _onAnchorPXBlur =  (e: any, slot: string, axes: number) => {
         console.log('_onAnchorPXBlur', slot, axes)
         
-        let temp = [...anchorPX]
+        let temp = [...state.localAnchorPX[slot]]
         temp[axes] = parseFloat(e.target.value)
-        setAnchorPX(temp)
+        state.updateLocalAnchorPX(slot, temp)
 
-        let converted = temp.map(v => v / 2)
-        setAnchorMM(converted)
+        let converted = temp.map((v, i) => v / scan.spacing[i])
+        state.updateLocalAnchorMM(slot, converted)
     }
 
     // --- ANCHOR UPDATE
     const _onClickAnchorSet = (e: any, slot: string) => {
-        console.log('_onClickAnchorUpdate', slot, anchorMM, anchorPX)
+        console.log('_onClickAnchorUpdate', slot, state.localAnchorPX[slot])
+
+        state.updateAnchor(slot, state.localAnchorPX[slot])
     }
 
     // --- CONTOUR ACTIONS
@@ -137,7 +136,10 @@ const ContentLoaded = ({slot}: {slot: string}) => {
     }
     const _onClickContourAnchor = (e: any, slot: string, id: number) => {
         console.log('_onClickContourAnchor', slot, id)
-        e.stopPropagation()
+
+        const current = state.dataset[slot].contours[id].center_of_mass
+        console.log(current)
+        state.updateAnchor(slot, current[0], current[1], current[2])
     }
     const _onClickContourTarget = (e: any, slot: string, id: number) => {
         console.log('_onClickContourTarget', slot, id)
@@ -166,7 +168,7 @@ const ContentLoaded = ({slot}: {slot: string}) => {
                     <div className='info-anchor-row'>
                         <span className='info-anchor-label'>Anchor (mm)</span>
                         <div className='info-anchor-controls'>
-                            {anchorMM.map((v: number, i: number) => <input
+                            {state.localAnchorMM[slot].map((v: number, i: number) => <input
                                 key={i}
                                 className='info-anchor-input mono'
                                 type='number'
@@ -179,7 +181,7 @@ const ContentLoaded = ({slot}: {slot: string}) => {
                     <div className='info-anchor-row'>
                         <span className='info-anchor-label'>Anchor (px)</span>
                         <div className='info-anchor-controls'>
-                            {anchorPX.map((v: number, i: number) => <input
+                            {state.localAnchorPX[slot].map((v: number, i: number) => <input
                                 key={i}
                                 className='info-anchor-input mono'
                                 type='number'

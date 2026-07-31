@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import { deleteDatasetAPI, getDeviceAPI, updateVisibilityAPI, uploadDicomAPI, uploadRTStructAPI } from './api/client'
+import { deleteDatasetAPI, getDeviceAPI, updateAnchorAPI, updateVisibilityAPI, uploadDicomAPI, uploadRTStructAPI } from './api/client'
 
 
 const AppStateContext = createContext<any>({})
@@ -17,6 +17,9 @@ export const AppStateProvider = ({ children }: { children: any })  => {
 	const [dataset, setDataset] = useState({"A": null, "B": null})
 	const [uploading, setUploading] = useState({"A": false, "B": false})
 
+	const [localAnchorMM, setLocalAnchorMM] = useState({"A": [0, 0, 0], "B": [0, 0, 0]})
+    const [localAnchorPX, setLocalAnchorPX] = useState({"A": [0, 0, 0], "B": [0, 0, 0]})
+
 
 	useEffect(() => {
 		getDeviceAPI().then(setDevice)
@@ -29,7 +32,14 @@ export const AppStateProvider = ({ children }: { children: any })  => {
 		setUploading((prev) => ({...prev, [slot]: true}))
 		try {
 			const ds = await uploadDicomAPI(slot, files)
+
+			const lAnchorMM = ds.anchor.map((x: number) => x / ds.scan.spacing[0])
+			const lAnchorPX = ds.anchor
+
 			setDataset((prev) => ({...prev, [slot]: ds}))
+			setLocalAnchorMM((prev) => ({...prev, [slot]: lAnchorMM}))
+			setLocalAnchorPX((prev) => ({...prev, [slot]: lAnchorPX}))
+			
 		} catch (err) {
 			console.error(JSON.stringify(err))
 		} finally {
@@ -69,16 +79,38 @@ export const AppStateProvider = ({ children }: { children: any })  => {
 		}
 	}, [])
 
+	// --- UPDATE ANCHOR
+	const updateLocalAnchorMM = (slot: string, anchor: number[]) => {
+		const ints = anchor.map(Math.round)
+		setLocalAnchorMM((prev) => ({...prev, [slot]: ints}))
+	}
+
+	const updateLocalAnchorPX = (slot: string, anchor: number[]) => {
+		const ints = anchor.map(Math.round)
+		setLocalAnchorPX((prev) => ({...prev, [slot]: ints}))
+	}
+
+	const updateAnchor = useCallback(async (slot: string, anchor: number[]) => {
+		try {
+			const ds = await updateAnchorAPI(slot, anchor)
+			setDataset((prev) => ({...prev, [slot]: ds}))
+		} catch (err) {
+			console.error(JSON.stringify(err))
+		}
+	}, [])
+
 	const value = useMemo(() => ({
 		device,
 		uploading,dataset,
 		uploadDicom, uploadRTStruct, deleteDataset,
-		updateVisibility
+		updateVisibility,
+		updateAnchor, localAnchorMM, updateLocalAnchorMM, localAnchorPX, updateLocalAnchorPX
 	}), [
 		device,
 		uploading,dataset,
 		uploadDicom, uploadRTStruct, deleteDataset,
-		updateVisibility
+		updateVisibility,
+		updateAnchor, localAnchorMM, updateLocalAnchorMM, localAnchorPX, updateLocalAnchorPX
 	])
 
 	return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>
