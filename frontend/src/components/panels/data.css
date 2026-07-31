@@ -13,7 +13,7 @@
     padding: 10px;
     width: 500px;
     height: 100vh;
-    overflow-x: scroll;
+    overflow-y: scroll;
 }
 
 .data-pane-closed {
@@ -97,6 +97,14 @@
     height: 15px;
 }
 
+.data-card-no-data {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 10px;
+    color: var(--text-dim)
+}
+
 .data-table {
     padding: 10px;
     width: 100%;
@@ -111,6 +119,14 @@
 .data-table-cell {
     font: inherit;
     text-align: right;
+}
+
+.data-table-switch {
+    margin: 0 10px;
+}
+
+.data-table-switch-active {
+    color: var(--accent-dim)
 }
 
 .data-table-row-label {
