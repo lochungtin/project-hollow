@@ -27,9 +27,15 @@ const _del = async (path: string) => _base_api(path, {method: 'DELETE'})
 export const getDeviceAPI = () => _get('api/device')
 
 export const uploadDicomAPI = (slot: string, files: FileList | File[]) => {
-    const body = new FormData()    
+    const body = new FormData()
     Array.from(files).forEach((f) => body.append('files', f))
     return _post(`api/${slot}/dicom`, body)
 }
 
-export const deleteDicomAPI = (slot: string) => _del(`api/${slot}`)
+export const uploadRTStructAPI = (slot: string, file: File) => {
+    const body = new FormData()
+    body.append('file', file)
+    return _post(`api/${slot}/rtstruct`, body)
+}
+
+export const deleteDatasetAPI = (slot: string) => _del(`api/${slot}`)

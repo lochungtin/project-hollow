@@ -209,7 +209,6 @@
 
 .info-contour-badge {
     border-radius: var(--radius);
-    background-color: var(--accent);
     width: 20px;
     height: 11px;
 }

@@ -8,6 +8,7 @@ import numpy as np
 class Scan:
     array: np.ndarray
     spacing: tuple[float, float, float]
+    origin: tuple[float, float, float]
     modality: str = "N/A"
     id: str = field(default_factory=lambda: uuid.uuid4().hex[:12])
 

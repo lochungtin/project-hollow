@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException, UploadFile
 
 from ..models.dataset import Dataset
-from ..parser import toScanObj
-from ..storage import clearDataset, setDataset
+from ..parser import toContourObjs, toScanObj
+from ..storage import clearDataset, getDataset, setDataset
 
 router = APIRouter(prefix="/api", tags=["datasets"])
 
@@ -12,16 +12,32 @@ async def upload_dicom(slot: str, files: list[UploadFile]):
     contents = [await f.read() for f in files]
     try:
         scan = toScanObj(contents)
+        dataset = Dataset(slot, scan)
+        setDataset(slot, dataset)
+
     except Exception as exc:
         raise HTTPException(400, f"Error: load dicom series failed: {exc}")
 
-    dataset = Dataset(slot, scan)
-    setDataset(slot, dataset)
+    return dataset.summary()
+
+
+@router.post("/{slot}/rtstruct")
+async def upload_dicom(slot: str, file: UploadFile):
+    content = await file.read()
+    dataset = getDataset(slot)
+    try:
+        contours = toContourObjs(content, dataset.scan)
+        dataset.contours = contours
+
+    except Exception as exc:
+        raise HTTPException(400, f"Error: error while loading rt struct: {exc}")
+    if not contours:
+        raise HTTPException(400, "Error: no structures found in uploaded struct file.")
 
     return dataset.summary()
 
 
 @router.delete("/{slot}")
-async def delete_dicom(slot: str):
+async def delete_dataset(slot: str):
     clearDataset(slot)
     return {"ok": True}

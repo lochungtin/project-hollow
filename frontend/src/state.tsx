@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import { deleteDicomAPI, getDeviceAPI, uploadDicomAPI } from './api/client'
+import { deleteDatasetAPI, getDeviceAPI, uploadDicomAPI, uploadRTStructAPI } from './api/client'
 
 
 const AppStateContext = createContext<any>({})
@@ -39,13 +39,23 @@ export const AppStateProvider = ({ children }: { children: any })  => {
 		}
 	}, [])
 
-	const uploadRTStruct = useCallback(async (slot: string)=> {
-		
+	const uploadRTStruct = useCallback(async (slot: string, file: File)=> {
+		setUploading({...uploading, [slot]: true})
+		try {
+			const ds = await uploadRTStructAPI(slot, file)
+			console.log(ds.contours)
+			setDataset((prev) => ({...prev, [slot]: ds}))
+			setHaveContours((prev) => ({...prev, [slot]: false}))
+		} catch (err) {
+			console.error(JSON.stringify(err))
+		} finally {
+			setUploading((prev) => ({...prev, [slot]: false}))
+		}
 	}, []) 
 
-	const deleteDicom = useCallback(async (slot: string)=> {
+	const deleteDataset = useCallback(async (slot: string)=> {
 		try {
-			await deleteDicomAPI(slot)
+			await deleteDatasetAPI(slot)
 			setDataset((prev) => ({ ...prev, [slot]: null }))
 			setHaveContours((prev) => ({ ...prev, [slot]: false }))
 		} catch (err) {
@@ -56,12 +66,14 @@ export const AppStateProvider = ({ children }: { children: any })  => {
 
 	const value = useMemo(() => ({
 		device,
-		uploading, uploadDicom, deleteDicom,
-		dataset, haveContours,
+		uploading, haveContours,
+		uploadDicom, uploadRTStruct, deleteDataset,
+		dataset
 	}), [
 		device,
-		uploading, uploadDicom, deleteDicom,
-		dataset, haveContours,
+		uploading, haveContours,
+		uploadDicom, uploadRTStruct, deleteDataset,
+		dataset
 	])
 
 	return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>

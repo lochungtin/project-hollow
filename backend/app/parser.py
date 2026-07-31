@@ -1,17 +1,38 @@
 from io import BytesIO
 
+import guava_rt as gv
 import numpy as np
-import pydicom
+import pydicom as dcm
 from scipy.ndimage import zoom as ndi_zoom
+from skimage.draw import polygon2mask
 
+from .models.contour import Contour
+from .models.mesh import Mesh
 from .models.scan import Scan
+from .storage import getDevice
+
+_PALETTE = [
+    (230, 25, 75),
+    (60, 180, 75),
+    (255, 225, 25),
+    (0, 130, 200),
+    (245, 130, 48),
+    (145, 30, 180),
+    (70, 240, 240),
+    (240, 50, 230),
+    (210, 245, 60),
+    (250, 190, 212),
+    (0, 128, 128),
+    (220, 190, 255),
+]
 
 
+# --- Dicom Series
 def _byteToSlices(filesBytes):
     rt = []
     for b in filesBytes:
         try:
-            rt.append(pydicom.dcmread(BytesIO(b), force=True))
+            rt.append(dcm.dcmread(BytesIO(b), force=True))
         except Exception:
             continue
     return [d for d in rt if hasattr(d, "PixelData")]
@@ -31,7 +52,7 @@ def _sortSlices(raw):
     for d in raw:
         ino = float(getattr(d, "InstanceNumber", 0))
         ipp = np.asarray(getattr(d, "ImagePositionPatient", [0.0, 0.0, ino]), float)
-        rt.append({"data": d, "normal": float(np.dot(ipp, norm))})
+        rt.append({"data": d, "ipp": ipp, "normal": float(np.dot(ipp, norm))})
 
     return sorted(rt, key=lambda s: s["normal"])
 
@@ -59,7 +80,7 @@ def _getSpacing(slices, first):
     else:
         sZ = float(getattr(first, "SliceThickness", 1.0))
 
-    return np.asarray([sZ, float(spacing[0]), float(spacing[1])], float)
+    return (sZ, float(spacing[0]), float(spacing[1]))
 
 
 def _resample(volume, spacing):
@@ -82,9 +103,64 @@ def toScanObj(filesBytes):
 
     volume = _buildVolume(slices, (len(slices), int(first.Rows), int(first.Columns)))
     spacing = _getSpacing(slices, first)
+    origin = tuple(float(slices[0]["ipp"][i]) for i in range(3))
 
     return Scan(
         array=_resample(volume, spacing).astype(np.float32),
         spacing=spacing,
+        origin=origin,
         modality=str(getattr(first, "Modality", "UNKNOWN")),
     )
+
+
+# --- RTStruct
+def toContourObjs(fileBytes, scan):
+    structSet = dcm.dcmread(BytesIO(fileBytes), force=True)
+
+    roi_names = {}
+    for item in getattr(structSet, "StructureSetROISequence", []):
+        roi_names[int(item.ROINumber)] = str(item.ROIName)
+
+    contours = {}
+    depth, height, width = scan.shape
+    sZ, sY, sX = scan.spacing
+    oX, oY, oZ = scan.origin
+
+    for i, roi_item in enumerate(getattr(structSet, "ROIContourSequence", [])):
+        number = int(roi_item.ReferencedROINumber)
+        name = roi_names.get(number, f"contour_{number}")
+        color = _PALETTE[i % len(_PALETTE)]
+
+        mask = np.zeros((depth, height, width), dtype=bool)
+        contour_seq = getattr(roi_item, "ContourSequence", [])
+        for contour_item in contour_seq:
+            data = np.array(contour_item.ContourData, dtype=float).reshape(-1, 3)
+            if data.shape[0] < 3:
+                continue
+
+            sIdx = int(round((float(data[0, 2]) - oZ) / sZ))
+            if sIdx < 0 or sIdx >= depth:
+                continue
+
+            row = (data[:, 1] - oY) / sY
+            col = (data[:, 0] - oX) / sX
+            try:
+                sMask = polygon2mask((height, width), np.stack([row, col], axis=1))
+            except Exception:
+                continue
+
+            mask[sIdx] |= sMask
+
+        if not mask.any():
+            continue
+
+        contour = Contour(
+            name=name,
+            number=number,
+            color=color,
+            mask=gv.Mask(mask, getDevice()),
+            mesh=Mesh.fromArr(mask, scan),
+        )
+        contours[contour.id] = contour
+
+    return contours

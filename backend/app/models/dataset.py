@@ -2,11 +2,12 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-# from .contour import Contour, Mesh
+from .contour import Contour
+from .scan import Scan
+
 # from .distance_map import DistanceMap
 # from .surface import Surface
 # from .volume import Volume
-from .scan import Scan
 
 
 @dataclass
@@ -15,7 +16,7 @@ class Dataset:
     scan: Scan
     anchor: np.ndarray = field(default_factory=lambda: np.zeros(3, float))
     alignment: np.ndarray = field(default_factory=lambda: np.zeros(3, float))
-    # contours: dict[str, Contour] = {}
+    contours: dict[str, Contour] = field(default_factory=dict)
     # surfaces: dict[str, Surface] = {}
     # distance_maps: dict[str, DistanceMap] = {}
     volume_vis: bool = False
@@ -35,4 +36,5 @@ class Dataset:
                 "rotation": self.rotation.tolist(),
                 "volume_visible": self.volume_vis,
             },
+            "contours": dict((n, c.summary()) for n, c in self.contours.items()),
         }
