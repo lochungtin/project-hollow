@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException, UploadFile
+from fastapi import APIRouter, HTTPException, Request, UploadFile
+from pydantic import BaseModel
 
 from ..models.dataset import Dataset
 from ..parser import toContourObjs, toScanObj
@@ -41,3 +42,14 @@ async def upload_dicom(slot: str, file: UploadFile):
 async def delete_dataset(slot: str):
     clearDataset(slot)
     return {"ok": True}
+
+
+class VisibilityPayload(BaseModel):
+    visibility: bool
+
+
+@router.put("/{slot}/scan/visibility")
+def update_scan_visibility(slot: str, body: VisibilityPayload):
+    dataset = getDataset(slot)
+    dataset.scan.visible = body.visibility
+    return dataset.summary()

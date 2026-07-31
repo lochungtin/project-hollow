@@ -49,11 +49,30 @@
 }
 
 .info-card-tag {
+    display: flex;
+    opacity: 0.5;
+    cursor: pointer;
+    margin: none;
+    border: none;
+    background: none;
+    padding: none;
+}
+
+.info-card-tag-active {
+    opacity: 1;
+}
+
+.info-card-tag-text {
     border: 1px solid var(--accent-dim);
     border-radius: 100vh;
     padding: 3px 8px;
+    color: var(--text);
     font-size: 8px;
     font-family: var(--mono);
+}
+
+.info-card-tag-text:hover {
+    border-color: var(--text-dim);
 }
 
 .info-card-close {

@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import { deleteDatasetAPI, getDeviceAPI, uploadDicomAPI, uploadRTStructAPI } from './api/client'
+import { deleteDatasetAPI, getDeviceAPI, updateVisibilityAPI, uploadDicomAPI, uploadRTStructAPI } from './api/client'
 
 
 const AppStateContext = createContext<any>({})
@@ -16,7 +16,6 @@ export const AppStateProvider = ({ children }: { children: any })  => {
 
 	const [dataset, setDataset] = useState({"A": null, "B": null})
 	const [uploading, setUploading] = useState({"A": false, "B": false})
-	const [haveContours, setHaveContours] = useState({"A": false, "B": false})
 
 
 	useEffect(() => {
@@ -27,25 +26,23 @@ export const AppStateProvider = ({ children }: { children: any })  => {
 
 	// --- FILE UPLOAD
 	const uploadDicom = useCallback(async (slot: string, files: File[]) => {
-		setUploading({...uploading, [slot]: true})
+		setUploading((prev) => ({...prev, [slot]: true}))
 		try {
 			const ds = await uploadDicomAPI(slot, files)
 			setDataset((prev) => ({...prev, [slot]: ds}))
-			setHaveContours((prev) => ({...prev, [slot]: false}))
 		} catch (err) {
 			console.error(JSON.stringify(err))
 		} finally {
+			console.log("reset")
 			setUploading((prev) => ({...prev, [slot]: false}))
 		}
 	}, [])
 
-	const uploadRTStruct = useCallback(async (slot: string, file: File)=> {
-		setUploading({...uploading, [slot]: true})
+	const uploadRTStruct = useCallback(async (slot: string, file: File) => {
+		setUploading((prev) => ({...prev, [slot]: true}))
 		try {
 			const ds = await uploadRTStructAPI(slot, file)
-			console.log(ds.contours)
 			setDataset((prev) => ({...prev, [slot]: ds}))
-			setHaveContours((prev) => ({...prev, [slot]: false}))
 		} catch (err) {
 			console.error(JSON.stringify(err))
 		} finally {
@@ -63,17 +60,26 @@ export const AppStateProvider = ({ children }: { children: any })  => {
 		}		
 	}, []) 
 
+	// --- TOGGLE VISIBILITY
+	const updateVisibility = useCallback(async (slot: string, type: string, visible: boolean, id?: string) => {
+		try {
+			const ds = await updateVisibilityAPI(slot, type, visible, id)
+			setDataset((prev) => ({...prev, [slot]: ds}))
+		} catch (err) {
+			console.error(JSON.stringify(err))
+		}
+	}, [])
 
 	const value = useMemo(() => ({
 		device,
-		uploading, haveContours,
+		uploading,dataset,
 		uploadDicom, uploadRTStruct, deleteDataset,
-		dataset
+		updateVisibility
 	}), [
 		device,
-		uploading, haveContours,
+		uploading,dataset,
 		uploadDicom, uploadRTStruct, deleteDataset,
-		dataset
+		updateVisibility
 	])
 
 	return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>

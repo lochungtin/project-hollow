@@ -10,6 +10,7 @@ class Scan:
     spacing: tuple[float, float, float]
     origin: tuple[float, float, float]
     modality: str = "N/A"
+    visible: bool = True
     id: str = field(default_factory=lambda: uuid.uuid4().hex[:12])
 
     @property
@@ -27,4 +28,5 @@ class Scan:
             "spacing": list(self.spacing),
             "modality": self.modality,
             "range": list(self.range),
+            "visible": self.visible,
         }

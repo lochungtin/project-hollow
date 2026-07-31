@@ -16,6 +16,8 @@ const ContentEmpty = ({slot}: {slot: string}) => {
     // --- UPLOAD DICOM FILES
     const _onClickDcmUpload = (e: any, slot: string) => {
         console.log('_onDCMClickUpload', slot)
+        if (state.uploading[slot])
+            return
         if (dicomUploadRef.current)
             dicomUploadRef.current.click()
     }
@@ -67,6 +69,8 @@ const ContentLoaded = ({slot}: {slot: string}) => {
     // --- UPLOAD RT STRUCT FILES
     const _onClickRTStructUpload = (e: any, slot: string) => {
         console.log('_onRTStructClickUpload', slot)
+        if (state.uploading[slot])
+            return
         if (structUploadRef.current)
             structUploadRef.current.click()
     }
@@ -183,7 +187,9 @@ const ContentLoaded = ({slot}: {slot: string}) => {
                 </div>
                 {contours.length != 0 && <span>Contours</span>}
                 {contours.length == 0 && <>
-                    <button className='info-dcm-upload' onClick={(e) => _onClickRTStructUpload(e, slot)}>Load RTSTRUCT</button>
+                    <button className='info-dcm-upload' onClick={(e) => _onClickRTStructUpload(e, slot)}>
+                        {state.uploading[slot] ? 'Uploading ...' : 'Load RTSTRUCT'}
+                    </button>
                     <input 
                         ref={structUploadRef}
                         type='file'
@@ -226,6 +232,14 @@ const ContentLoaded = ({slot}: {slot: string}) => {
 const Card = ({slot}: {slot: string}) => {
     const state = useAppState()
     const ds = state.dataset[slot]
+    const visible = ds?.scan?.visible 
+
+    // --- TOGGLE VISIBILITY
+    const _onClickVisible = (e: any, slot: string) => {
+        console.log('_onClickVisible', slot)
+        if (ds)
+            state.updateVisibility(slot, 'scan', !visible)
+    }
 
     // --- CLOSE
     const _onClickClose = (e: any, slot: string) => {
@@ -237,8 +251,10 @@ const Card = ({slot}: {slot: string}) => {
         <section className={`info-card ${1 ? 'info-card-active' : ''}`}>
             <header className='info-card-header'>
                 <span className='info-card-badge'>{slot}</span>
-                <span className='info-card-name'>{1 ? `Dataset ${slot}` : 'Empty Slot'}</span>
-                <span className='info-card-tag'>Active</span>
+                <span className='info-card-name'>{ds ? `Dataset ${slot}` : 'Empty Slot'}</span>
+                <button className={`info-card-tag ${visible ? 'info-card-tag-active' : ''}`} onClick={(e) => _onClickVisible(e, slot)}>
+                    <span className='info-card-tag-text'>{visible ? 'Enabled' : 'Disabled'}</span>
+                </button>
                 <button className='info-card-close' onClick={(e) => _onClickClose(e, slot)}>
                    <img className='info-card-close-img' src={Close} alt='close' />
                 </button>
