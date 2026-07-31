@@ -16,10 +16,10 @@ export const uploadRTStructAPI = (slot: string, file: File) => {
 export const deleteDatasetAPI = (slot: string) => _del(`api/${slot}`)
 
 export const updateVisibilityAPI = (slot: string, type: string, visible: boolean, id?: string) => {
-    console.log(visible)
+    const payload = {"visibility": visible}
     if (id)
-        return _put(`/api/${slot}/${type}/${id}/visi""bility`, visible)
-    return _put(`/api/${slot}/${type}/visibility`, {"visibility": visible})
+        return _put(`/api/${slot}/${type}/${id}/visibility`, payload)
+    return _put(`/api/${slot}/${type}/visibility`, payload)
 }
 
 

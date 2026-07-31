@@ -199,15 +199,22 @@
     padding: 9px 10px;
 }
 
+.info-contour-item-container {
+    display: flex;
+    position: relative;
+    align-items: center;
+}
+
 .info-contour-item {
     display: flex;
-    justify-content: space-between;
+    justify-content: left;
     align-items: center;
     cursor: pointer;
     border: 1px solid var(--border);
     border-radius: var(--radius);
     background-color: var(--panel);
     padding: 8px 10px;
+    width: 100%;
     color: var(--text);
 }
 
@@ -242,6 +249,8 @@
 
 .info-contour-action-container {
     display: flex;
+    position: absolute;
+    right: 10px;
     gap: 5px;
 }
 

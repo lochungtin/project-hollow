@@ -53,3 +53,10 @@ def update_scan_visibility(slot: str, body: VisibilityPayload):
     dataset = getDataset(slot)
     dataset.scan.visible = body.visibility
     return dataset.summary()
+
+
+@router.put("/{slot}/contour/{id}/visibility")
+def update_scan_visibility(slot: str, id: str, body: VisibilityPayload):
+    dataset = getDataset(slot)
+    dataset.contours[id].visible = body.visibility
+    return dataset.summary()

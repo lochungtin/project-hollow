@@ -16,14 +16,16 @@ const ContentEmpty = ({slot}: {slot: string}) => {
     // --- UPLOAD DICOM FILES
     const _onClickDcmUpload = (e: any, slot: string) => {
         console.log('_onDCMClickUpload', slot)
+
         if (state.uploading[slot])
             return
+
         if (dicomUploadRef.current)
             dicomUploadRef.current.click()
     }
     const _onDcmUpload = (e: any, slot: string) => {
         console.log('_onDCMUpload', slot, e.target.files.length)
-        
+
         if (e.target.files && e.target.files.length > 0)
             state.uploadDicom(slot, e.target.files)
         e.target.value = ''
@@ -69,14 +71,16 @@ const ContentLoaded = ({slot}: {slot: string}) => {
     // --- UPLOAD RT STRUCT FILES
     const _onClickRTStructUpload = (e: any, slot: string) => {
         console.log('_onRTStructClickUpload', slot)
+
         if (state.uploading[slot])
             return
+
         if (structUploadRef.current)
             structUploadRef.current.click()
     }
     const _onRTStructUpload = (e: any, slot: string) => {
         console.log('_onRTStructUpload', slot, e.target.files.length)
-        
+
         if (e.target.files && e.target.files.length == 1)
             state.uploadRTStruct(slot, e.target.files[0])
         e.target.value = ''
@@ -128,6 +132,8 @@ const ContentLoaded = ({slot}: {slot: string}) => {
     // --- CONTOUR ACTIONS
     const _onClickContour = (e: any, slot: string, id: number) => {
         console.log('_onClickContour', slot, id)
+        const current = state.dataset[slot].contours[id].visible
+        state.updateVisibility(slot, 'contour', !current, id)
     }
     const _onClickContourAnchor = (e: any, slot: string, id: number) => {
         console.log('_onClickContourAnchor', slot, id)
@@ -203,26 +209,28 @@ const ContentLoaded = ({slot}: {slot: string}) => {
             {contours.length == 0 && <footer className='info-card-footer'>Load contours for more options.</footer>}
             {contours.length != 0 && <div className='info-contour-container'>
                 {contours.map((c: any) => {
-                    return <div key={c.id} className='info-contour-item' onClick={(e) => _onClickContour(e, slot, c.id)}>
-                        <div className={`info-contour-label ${c.visible % 7 ? 'info-contour-label-active' : ''}`}>
-                            <div className='info-contour-badge' style={{backgroundColor: rgb2hex(c.color)}}></div>
-                            <span className='info-contour-name'>{c.name}</span>
+                    return <div key={c.id} className="info-contour-item-container">
+                            <button  className='info-contour-item' onClick={(e) => _onClickContour(e, slot, c.id)}>
+                                <div className={`info-contour-label ${c.visible % 7 ? 'info-contour-label-active' : ''}`}>
+                                    <div className='info-contour-badge' style={{backgroundColor: rgb2hex(c.color)}}></div>
+                                    <span className='info-contour-name'>{c.name}</span>
+                                </div>
+                            </button>
+                            <div className='info-contour-action-container'>
+                                <button className='info-contour-action' onClick={(e) => _onClickContourAnchor(e, slot, c.id)}>
+                                    <img className='info-contour-action-img'src={Anchor} alt="A"/>
+                                </button>
+                                <button className='info-contour-action' onClick={(e) => _onClickContourTarget(e, slot, c.id)}>
+                                    <img className='info-contour-action-img'src={Target} alt="T"/>
+                                </button>
+                                <button className='info-contour-action' onClick={(e) => _onClickContourSelect(e, slot, c.id)}>
+                                    <img className='info-contour-action-img'src={Select} alt="S"/>
+                                </button>
+                                <button className='info-contour-action' onClick={(e) => _onClickContourDMap(e, slot, c.id)}>
+                                    <img className='info-contour-action-img'src={DMap} alt="D"/>
+                                </button>
+                            </div>
                         </div>
-                        <div className='info-contour-action-container'>
-                            <button className='info-contour-action' onClick={(e) => _onClickContourAnchor(e, slot, c.id)}>
-                                <img className='info-contour-action-img'src={Anchor} alt="A"/>
-                            </button>
-                            <button className='info-contour-action' onClick={(e) => _onClickContourTarget(e, slot, c.id)}>
-                                <img className='info-contour-action-img'src={Target} alt="T"/>
-                            </button>
-                            <button className='info-contour-action' onClick={(e) => _onClickContourSelect(e, slot, c.id)}>
-                                <img className='info-contour-action-img'src={Select} alt="S"/>
-                            </button>
-                            <button className='info-contour-action' onClick={(e) => _onClickContourDMap(e, slot, c.id)}>
-                                <img className='info-contour-action-img'src={DMap} alt="D"/>
-                            </button>
-                        </div>
-                    </div>
                 })}
             </div>}
         </>
@@ -237,6 +245,7 @@ const Card = ({slot}: {slot: string}) => {
     // --- TOGGLE VISIBILITY
     const _onClickVisible = (e: any, slot: string) => {
         console.log('_onClickVisible', slot)
+
         if (ds)
             state.updateVisibility(slot, 'scan', !visible)
     }
@@ -244,6 +253,7 @@ const Card = ({slot}: {slot: string}) => {
     // --- CLOSE
     const _onClickClose = (e: any, slot: string) => {
         console.log('_onClickClose', slot)
+
         state.deleteDataset(slot)
     }
 

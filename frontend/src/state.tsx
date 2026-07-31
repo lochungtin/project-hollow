@@ -33,7 +33,6 @@ export const AppStateProvider = ({ children }: { children: any })  => {
 		} catch (err) {
 			console.error(JSON.stringify(err))
 		} finally {
-			console.log("reset")
 			setUploading((prev) => ({...prev, [slot]: false}))
 		}
 	}, [])
