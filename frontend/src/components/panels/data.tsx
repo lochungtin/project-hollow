@@ -8,6 +8,12 @@ import Switch from '../ui/Switch'
 import './data.css'
 
 
+const FALLBACK_TEXT = [
+    'Upload contours to start analysing.',
+    'Process requires both RTStructs to start.',
+    'Process requries both target structures to be set.'
+]
+
 const parseContoursNumDiff = (
     A: any,
     B: any, 
@@ -127,7 +133,24 @@ const Figure = () => {
 
 }
 
-const Fallback = ({text}: {text: string}) => <div className='data-card-no-data'><span>{text}</span></div>
+const Fallback = ({fallbackCode, fallbackMax, ready, fn, children}: {
+    fallbackCode: number, 
+    fallbackMax: number, 
+    ready: boolean, 
+    fn: any, 
+    children?: React.ReactElement
+}) => {
+    if (ready)
+        return children
+    return (<div className='data-card-fallback'>
+        <div className='data-card-fallback-blur'>
+            {fallbackCode < fallbackMax ?
+                <div className='data-card-no-data'>{FALLBACK_TEXT[fallbackCode]}</div> :
+                <button className='data-card-job-trigger'>Queue Job to Local Server</button>
+            }
+        </div>
+    </div>)
+}
 
 const DataPane = () => {
     const [open, setOpen] = useState(true)
@@ -143,8 +166,8 @@ const DataPane = () => {
     const A = _A?.contours ?? {}
     const B = _B?.contours ?? {}
 
-    const emptyA = Object.keys(A).length === 0
-    const emptyB = Object.keys(B).length === 0
+    const emptyA = Object.keys(A).length !== 0
+    const emptyB = Object.keys(B).length !== 0
 
     const aVolScale = Math.pow(_A?.scan.spacing[0] ?? 1, 3)
     const bVolScale = Math.pow(_B?.scan.spacing[0] ?? 1, 3)
@@ -154,8 +177,8 @@ const DataPane = () => {
     const volData = parseContoursNumDiff(A, B, 'volume', aVolScale, bVolScale, scaleVol)
     const saData = parseContoursNumDiff(A, B, 'surface_area', aSAScale, bSAScale, scaleSA)
 
-    const bsdData = state.analysis?.bsd ?? 1
-    console.log(bsdData)
+    const targetsSet = (_A &&_A?.targetID !== "unknown") && (_B && _B?.targetID !== "unknown")
+    const displayStatus = +emptyA + +emptyB + +targetsSet
 
     return (
         <aside className='data-pane-root'>
@@ -164,43 +187,39 @@ const DataPane = () => {
             </button>
             <main className={`data-pane ${open ? '' : 'data-pane-closed'}`}>
                 <Card badge='VOL' title='Volume'>
-                    {volData.data.length > 0 ?
-                        <Table {...volData} scale={scaleVol} setScale={setScaleVol} decorator={[2, 3]}/> :
-                        <Fallback text='Upload contours to start analysing' />
-                    }
+                    <Fallback ready={volData.data.length > 0} fallbackCode={volData.data.length} fallbackMax={1} fn=''>
+                        <Table {...volData} scale={scaleVol} setScale={setScaleVol} decorator={[2, 3]}/> 
+                    </Fallback>
                 </Card>
                 <Card badge='SA' title='Surface Area'>
-                    {saData.data.length > 0 ?
-                        <Table {...saData} scale={scaleSA} setScale={setScaleSA} decorator={[2, 3]}/> :
-                        <Fallback text='Upload contours to start analysing' />
-                    }
+                    <Fallback ready={saData.data.length > 0} fallbackCode={saData.data.length} fallbackMax={1} fn=''>
+                        <Table {...saData} scale={scaleSA} setScale={setScaleSA} decorator={[2, 3]}/> 
+                    </Fallback>
                 </Card>
                 <Card badge='BSD' title='Bidirectional Surface Discrepancy'>
+                    <Fallback ready={false} fallbackCode={displayStatus} fallbackMax={2} fn=''>
 
-
-                    {(emptyA&&emptyB) && <Fallback text='Upload contours to start analysing' />}
-                    {(emptyA||emptyB)&&!(emptyA&&emptyB) && <Fallback text='Process requires both RTStructs to start' />}
+                    </Fallback>
                 </Card>
                 <Card badge='DISP' title='ROI Relative Displacement'>
+                    <Fallback ready={false} fallbackCode={displayStatus} fallbackMax={2} fn=''>
 
-
-                    {(emptyA&&emptyB) && <Fallback text='Upload contours to start analysing' />}
-                    {(emptyA||emptyB)&&!(emptyA&&emptyB) && <Fallback text='Process requires both RTStructs to start' />}
+                    </Fallback>
                 </Card>
                 <Card badge='SD' title='Separation Distance'>
+                    <Fallback ready={false} fallbackCode={displayStatus} fallbackMax={3} fn=''>
 
-
-                    <Fallback text='Upload contours to start analysing' />
+                    </Fallback>
                 </Card>
                 <Card badge='DiVH' title='Distance Volume Histogram'>
+                    <Fallback ready={false} fallbackCode={displayStatus} fallbackMax={3} fn=''>
 
-
-                    <Fallback text='Upload contours to start analysing' />
+                    </Fallback>
                 </Card>
                 <Card badge='SD-N' title='Separation Distance - Nearside Surface'>
+                    <Fallback ready={false} fallbackCode={displayStatus} fallbackMax={3} fn=''>
 
-
-                    <Fallback text='Upload contours to start analysing' />
+                    </Fallback>
                 </Card>
             </main>
         </aside>

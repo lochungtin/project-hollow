@@ -98,11 +98,41 @@
 }
 
 .data-card-no-data {
+    color: var(--text-dim)
+}
+
+.data-card-fallback {
+    display: flex;
+    flex: 1;
+    background-image: repeating-linear-gradient(45deg,
+            var(--text-faint) 0,
+            var(--text-faint) 1px,
+            transparent 0,
+            transparent 50%);
+    background-size: 30px 30px;
+}
+
+.data-card-fallback-blur {
     display: flex;
     justify-content: center;
     align-items: center;
-    margin: 10px;
-    color: var(--text-dim)
+    backdrop-filter: blur(5px);
+    padding: 20px;
+    width: 100%;
+}
+
+.data-card-job-trigger {
+    cursor: pointer;
+    border: none;
+    border: 1px solid var(--accent-dim);
+    border-radius: var(--radius);
+    background-color: transparent;
+    padding: 8px 10px;
+    color: var(--text);
+}
+
+.data-card-job-trigger:hover {
+    color: var(--accent);
 }
 
 .data-table {
