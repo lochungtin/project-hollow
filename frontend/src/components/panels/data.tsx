@@ -3,7 +3,6 @@ import ChevDown from '../../icons/chev-down.svg'
 import ChevLeft from '../../icons/chev-left.svg'
 import ChevRight from '../../icons/chev-right.svg'
 import { useAppState } from '../../state'
-import { rgb2hex } from '../ui/color'
 import Switch from '../ui/Switch'
 import './data.css'
 
@@ -26,14 +25,11 @@ const parseContoursNumDiff = (
     scaleB = doScale ? scaleB : 1
 
     const rt: any = {}
-    const colors: number[][] = []
     
     Object.values(A).forEach((c: any) => {
         const val = c[field] / scaleA
-        if (!(c.name in rt)) {
+        if (!(c.name in rt))
             rt[c.name] = {'A': val, 'B': '-', 'abs': '-', 'perc': '-'}
-            colors.push(c.color)
-        }
         else {
             rt[c.name]['A'] = val
             rt[c.name]['abs'] = rt[c.name]['B'] - val
@@ -42,10 +38,8 @@ const parseContoursNumDiff = (
     })
     Object.values(B).forEach((c: any) => {
         const val = c[field] / scaleB
-        if (!(c.name in rt)) {
+        if (!(c.name in rt))
             rt[c.name] = {'A': '-', 'B': val, 'abs': '-', 'perc': '-'}
-            colors.push(c.color)
-        }
         else {
             rt[c.name]['B'] = val
             rt[c.name]['abs'] = val - rt[c.name]['A']
@@ -54,7 +48,6 @@ const parseContoursNumDiff = (
     })
 
     return {
-        'colors': colors,
         'rowNames': Object.keys(rt),
         'colNames': ['Dataset A', 'Dataset B', 'Abs Diff', '% Diff'],
         'data': Object.values(rt).map((grp: any) => Object.values(grp))
@@ -78,12 +71,32 @@ const Card = ({badge, title, children} : {badge: string, title: string, children
     )
 }
 
+const Fallback = ({fallbackCode, fallbackMax, ready, fn, children}: {
+    fallbackCode: number, 
+    fallbackMax: number, 
+    ready: boolean, 
+    fn?: any, 
+    children?: React.ReactElement
+}) => {
+
+
+    if (ready)
+        return children
+    return (<div className='data-card-fallback'>
+        <div className='data-card-fallback-blur'>
+            {fallbackCode < fallbackMax ?
+                <div className='data-card-no-data'>{FALLBACK_TEXT[fallbackCode]}</div> :
+                <button className='data-card-job-trigger' onClick={(e) => fn()}>Queue Job to Local Server</button>
+            }
+        </div>
+    </div>)
+}
+
 const Table = (
-    {rowNames, colNames, data, colors, scale, setScale, decorator = []}: 
+    {rowNames, colNames, data, scale, setScale, decorator = []}: 
     {   rowNames: string[], 
         colNames: string[],
         data: any[][],
-        colors: number[][], 
         scale: boolean,
         setScale: any,
         decorator?: number[]
@@ -94,7 +107,7 @@ const Table = (
     return (<table className='data-table'>
         <tbody>
             <tr className='data-table-row'>
-                <th>
+                <th className='data-table-switch-cell'>
                     <span className={scale ? '' : 'data-table-switch-active'}>px</span> 
                     <Switch 
                         slotProps={{ input: { 'aria-label': 'controlled' } }} 
@@ -111,7 +124,6 @@ const Table = (
         {data.map((row, i) => {
             return (<tbody key={i}><tr className='data-table-row'>
                 <th className='data-table-row-label'>
-                    <div className='data-table-row-label-badge' style={{backgroundColor: rgb2hex(colors[i])}}></div>
                     <span>{rowNames[i]}</span>
                 </th>
                 {row.map((cell, j) => {
@@ -129,9 +141,7 @@ const Table = (
                         _cell = _cell.toFixed(2)
                     }
 
-                    return <th key={j} className={`data-table-cell ${decor}`}>
-                        {_cell}
-                    </th>
+                    return <th key={j} className={`data-table-cell ${decor}`}>{_cell}</th>
                 })}
             </tr></tbody>)
         })}
@@ -142,30 +152,12 @@ const Figure = () => {
 
 }
 
-const Fallback = ({fallbackCode, fallbackMax, ready, fn, children}: {
-    fallbackCode: number, 
-    fallbackMax: number, 
-    ready: boolean, 
-    fn: any, 
-    children?: React.ReactElement
-}) => {
-    if (ready)
-        return children
-    return (<div className='data-card-fallback'>
-        <div className='data-card-fallback-blur'>
-            {fallbackCode < fallbackMax ?
-                <div className='data-card-no-data'>{FALLBACK_TEXT[fallbackCode]}</div> :
-                <button className='data-card-job-trigger'>Queue Job to Local Server</button>
-            }
-        </div>
-    </div>)
-}
-
 const DataPane = () => {
     const [open, setOpen] = useState(true)
 
     const [scaleVol, setScaleVol] = useState(true)
     const [scaleSA, setScaleSA] = useState(true)
+    const [scaleBSD, setScaleBSD] = useState(true)
 
     const state = useAppState()
 
@@ -189,6 +181,8 @@ const DataPane = () => {
     const targetsSet = (_A &&_A?.targetID !== "unknown") && (_B && _B?.targetID !== "unknown")
     const displayStatus = +emptyA + +emptyB + +targetsSet
 
+    const bsdData = Object.values(state.bsdRes).map((r: any) => Object.values(r).map((v: any) => v / (scaleBSD ? aSAScale : 1)))
+
     return (
         <aside className='data-pane-root'>
             <button className='data-pane-toggle' onClick={(e) => setOpen(!open)}>
@@ -196,23 +190,35 @@ const DataPane = () => {
             </button>
             <main className={`data-pane ${open ? '' : 'data-pane-closed'}`}>
                 <Card badge='VOL' title='Volume'>
-                    <Fallback ready={volData.data.length > 0} fallbackCode={volData.data.length} fallbackMax={1} fn=''>
-                        <Table {...volData} scale={scaleVol} setScale={setScaleVol} decorator={[2, 3]}/> 
+                    <Fallback ready={volData.data.length > 0} fallbackCode={volData.data.length} fallbackMax={1}>
+                        <Table {...volData} scale={scaleVol} setScale={setScaleVol} decorator={[2, 3]} /> 
                     </Fallback>
                 </Card>
                 <Card badge='SA' title='Surface Area'>
-                    <Fallback ready={saData.data.length > 0} fallbackCode={saData.data.length} fallbackMax={1} fn=''>
-                        <Table {...saData} scale={scaleSA} setScale={setScaleSA} decorator={[2, 3]}/> 
+                    <Fallback ready={saData.data.length > 0} fallbackCode={saData.data.length} fallbackMax={1}>
+                        <Table {...saData} scale={scaleSA} setScale={setScaleSA} decorator={[2, 3]} /> 
                     </Fallback>
                 </Card>
                 <Card badge='BSD' title='Bidirectional Surface Discrepancy'>
-                    <Fallback ready={false} fallbackCode={displayStatus} fallbackMax={2} fn=''>
-
+                    <Fallback ready={Object.keys(state.bsdRes).length > 0} fallbackCode={displayStatus} fallbackMax={2} fn={state.triggerBSD}>
+                        <Table
+                            rowNames={Object.keys(state.bsdRes)}
+                            colNames={["ASD", "HD95", "HD"]}
+                            data={bsdData}
+                            scale={scaleBSD}
+                            setScale={setScaleBSD}
+                        /> 
                     </Fallback>
                 </Card>
                 <Card badge='DISP' title='ROI Relative Displacement'>
-                    <Fallback ready={false} fallbackCode={displayStatus} fallbackMax={2} fn=''>
-
+                    <Fallback ready={false} fallbackCode={displayStatus} fallbackMax={2} fn={state.triggerBSD}>
+                        <Table
+                            rowNames={Object.keys(state.bsdRes)}
+                            colNames={["ASD", "HD95", "HD"]}
+                            data={bsdData}
+                            scale={scaleBSD}
+                            setScale={setScaleBSD}
+                        /> 
                     </Fallback>
                 </Card>
                 <Card badge='SD' title='Separation Distance'>

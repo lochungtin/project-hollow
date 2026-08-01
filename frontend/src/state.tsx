@@ -20,6 +20,12 @@ export const AppStateProvider = ({ children }: { children: any })  => {
 	const [localAnchorMM, setLocalAnchorMM] = useState({"A": [0, 0, 0], "B": [0, 0, 0]})
     const [localAnchorPX, setLocalAnchorPX] = useState({"A": [0, 0, 0], "B": [0, 0, 0]})
 
+	const [bsdRes, setBSDRes] = useState({})
+	const [dispRes, setDispRes] = useState({})
+	const [sepDRes, setSepDRes] = useState({})
+	const [dvhRes, setDvhRes] = useState({})
+	const [sepDNRes, setSepDNRes] = useState({})
+
 
 	useEffect(() => {
 		getDeviceAPI().then(setDevice)
@@ -119,7 +125,7 @@ export const AppStateProvider = ({ children }: { children: any })  => {
 	const triggerBSD = useCallback(async () => {
 		try {
 			const res = await triggerBSDAPI()
-			console.log(res)
+			setBSDRes(res)
 		} catch (err) {
 			console.error(JSON.stringify(err))
 		}
@@ -133,6 +139,7 @@ export const AppStateProvider = ({ children }: { children: any })  => {
 		updateVisibility,
 		updateAnchor, localAnchorMM, updateLocalAnchorMM, localAnchorPX, updateLocalAnchorPX,
 		updateTarget,
+		triggerBSD, bsdRes
 	}), [
 		device,
 		uploading,dataset,
@@ -140,6 +147,7 @@ export const AppStateProvider = ({ children }: { children: any })  => {
 		updateVisibility,
 		updateAnchor, localAnchorMM, updateLocalAnchorMM, localAnchorPX, updateLocalAnchorPX,
 		updateTarget,
+		triggerBSD,
 	])
 
 	return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>

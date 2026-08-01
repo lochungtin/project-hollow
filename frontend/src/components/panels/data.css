@@ -151,6 +151,11 @@
     text-align: right;
 }
 
+.data-table-switch-cell {
+    padding-left: 20px;
+    text-align: left;
+}
+
 .data-table-switch {
     margin: 0 10px;
 }
@@ -165,13 +170,6 @@
     color: var(--text-dim);
     font: inherit;
     text-align: left;
-}
-
-.data-table-row-label-badge {
-    margin-right: 10px;
-    border-radius: var(--radius);
-    width: 10px;
-    height: 10px;
 }
 
 .data-table-col-label {
