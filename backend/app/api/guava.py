@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from ..guava import getBSD
+from ..guava import getBSD, getDisp, getSepD, getSepDN
 from ..storage import getDevice
 
 router = APIRouter(prefix="/api/guava", tags=["jobs"])
@@ -14,3 +14,23 @@ def getDeviceInfo():
 @router.get("/bsd")
 def triggerBSD():
     return getBSD()
+
+
+@router.get("/disp")
+def triggerBSD():
+    return getBSD()
+
+
+@router.get("/disp")
+def triggerDisp():
+    return getDisp()
+
+
+@router.get("/sepd")
+def triggerSepD():
+    return getSepD()
+
+
+@router.get("/sepdn")
+def triggerSepDN():
+    return getSepDN()

@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import { deleteDatasetAPI, getDeviceAPI, triggerBSDAPI, updateAnchorAPI, updateTargetAPI, updateVisibilityAPI, uploadDicomAPI, uploadRTStructAPI } from './api/client'
+import { deleteDatasetAPI, getDeviceAPI, rehydrateAPI, triggerBSDAPI, triggerDispAPI, triggerSepDAPI, triggerSepDNAPI, updateAnchorAPI, updateTargetAPI, updateVisibilityAPI, uploadDicomAPI, uploadRTStructAPI } from './api/client'
 
 
 const AppStateContext = createContext<any>({})
@@ -26,9 +26,30 @@ export const AppStateProvider = ({ children }: { children: any })  => {
 	const [dvhRes, setDvhRes] = useState({})
 	const [sepDNRes, setSepDNRes] = useState({})
 
+	const rehydrate = useCallback(async () => {
+		try {
+			const res = await rehydrateAPI()
+
+			Object.entries(res).forEach(([slot, ds]: [slot: string, ds: any]) => {
+				if (Object.keys(ds).length !== 0) {
+					const lAnchorMM = ds.anchor.map((x: number) => Math.round(x / ds.scan.spacing[0]))
+					const lAnchorPX = ds.anchor
+
+					setDataset((prev) => ({...prev, [slot]: ds}))
+					setLocalAnchorMM((prev) => ({...prev, [slot]: lAnchorMM}))
+					setLocalAnchorPX((prev) => ({...prev, [slot]: lAnchorPX}))
+				}
+			})
+		} catch {
+			setDataset({"A": null, "B": null})
+			setLocalAnchorMM({"A": [0, 0, 0], "B": [0, 0, 0]})
+			setLocalAnchorPX({"A": [0, 0, 0], "B": [0, 0, 0]})
+		}
+	}, [])
 
 	useEffect(() => {
 		getDeviceAPI().then(setDevice)
+		rehydrate()
 		return () => {}
 	}, [])
 
@@ -132,6 +153,34 @@ export const AppStateProvider = ({ children }: { children: any })  => {
 	}, [])
 
 
+	const triggerDisp = useCallback(async () => {
+		try {
+			const res = await triggerDispAPI()
+			setDispRes(res)
+		} catch (err) {
+			console.error(JSON.stringify(err))
+		}
+	}, [])
+
+	const triggerSepD = useCallback(async () => {
+		try {
+			const res = await triggerSepDAPI()
+			setSepDRes(res)
+		} catch (err) {
+			console.error(JSON.stringify(err))
+		}
+	}, [])
+
+	const triggerSepDN = useCallback(async () => {
+		try {
+			const res = await triggerSepDNAPI()
+			setSepDNRes(res)
+		} catch (err) {
+			console.error(JSON.stringify(err))
+		}
+	}, [])
+
+
 	const value = useMemo(() => ({
 		device,
 		uploading,dataset,
@@ -139,7 +188,10 @@ export const AppStateProvider = ({ children }: { children: any })  => {
 		updateVisibility,
 		updateAnchor, localAnchorMM, updateLocalAnchorMM, localAnchorPX, updateLocalAnchorPX,
 		updateTarget,
-		triggerBSD, bsdRes
+		triggerBSD, bsdRes,
+		triggerDisp, dispRes,
+		triggerSepD, sepDRes,
+		triggerSepDN, sepDNRes,
 	}), [
 		device,
 		uploading,dataset,
@@ -147,7 +199,10 @@ export const AppStateProvider = ({ children }: { children: any })  => {
 		updateVisibility,
 		updateAnchor, localAnchorMM, updateLocalAnchorMM, localAnchorPX, updateLocalAnchorPX,
 		updateTarget,
-		triggerBSD,
+		triggerBSD, bsdRes,
+		triggerDisp, dispRes,
+		triggerSepD, sepDRes,
+		triggerSepDN, sepDNRes,
 	])
 
 	return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>

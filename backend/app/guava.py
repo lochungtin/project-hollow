@@ -4,12 +4,12 @@ import numpy as np
 from .storage import getDataset, getDevice, getGuavaStore
 
 
-def getRegions():
-    rt = {"A": None, "B": None}
-
+def buildRegions():
     gvStore = getGuavaStore()
 
-    for slot in rt.keys():
+    for slot in ("A", "B"):
+        dataset = getDataset(slot)
+
         masks = []
         labels = []
         for name, mask in gvStore["masks"][slot].items():
@@ -17,29 +17,34 @@ def getRegions():
             labels.append(name)
 
         if len(labels) > 0:
-            rt[slot] = gv.Region(
+            target = labels[0]
+            if dataset.targetID != "unknown":
+                target = dataset.contours[dataset.targetID].name
+
+            gvStore["regions"][slot] = gv.Region(
                 *masks,
-                target=labels[0],
+                target=target,
                 anchor=np.asarray(getDataset(slot).anchor),
                 labels=labels,
-                dev="cpu"
+                dev=getDevice()
             )
 
-    return rt["A"], rt["B"]
+    return gvStore["regions"]["A"], gvStore["regions"]["B"]
 
 
 def getBSD():
-    regionA, regionB = getRegions()
-    if regionA is None or regionB is None:
-        return None
+    gvStore = getGuavaStore()
+    rA, rB = gvStore["regions"]["A"], gvStore["regions"]["B"]
+    if rA is None or rB is None:
+        rA, rB = buildRegions()
 
     metrics = gv.Metrics(
-        regionA,
-        regionB,
-        target_A=regionA.target,
-        target_B=regionB.target,
-        anchor_A=regionA.anchor,
-        anchor_B=regionB.anchor,
+        rA,
+        rB,
+        target_A=rA.target,
+        target_B=rB.target,
+        anchor_A=rA.anchor,
+        anchor_B=rB.anchor,
     )
 
     asd = metrics.getBSDDiff("ASD")
@@ -55,3 +60,15 @@ def getBSD():
         }
 
     return rt
+
+
+def getDisp():
+    return {}
+
+
+def getSepD():
+    return {}
+
+
+def getSepDN():
+    return {}

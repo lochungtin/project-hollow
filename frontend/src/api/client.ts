@@ -1,6 +1,11 @@
 // --- EXPOSED APIS
+// rehydrate cached data
+export const rehydrateAPI = () => _get('api/dataset/all')
+
+// get computation device
 export const getDeviceAPI = () => _get('api/guava/device')
 
+// dicom dataset handling
 export const uploadDicomAPI = (slot: string, files: FileList | File[]) => {
     const body = new FormData()
     Array.from(files).forEach((f) => body.append('files', f))
@@ -15,6 +20,7 @@ export const uploadRTStructAPI = (slot: string, file: File) => {
 
 export const deleteDatasetAPI = (slot: string) => _del(`api/dataset/${slot}`)
 
+// render handling
 export const updateVisibilityAPI = (slot: string, type: string, visible: boolean, id?: string) => {
     const payload = {"visibility": visible}
     if (id)
@@ -22,6 +28,7 @@ export const updateVisibilityAPI = (slot: string, type: string, visible: boolean
     return _put(`/api/dataset/${slot}/${type}/visibility`, payload)
 }
 
+// target and anchor handling
 export const updateAnchorAPI = (slot: string, anchor: number[], id: string) => {
     const payload = {"x": anchor[0], "y": anchor[1], "z": anchor[2], "id": id}
     return _put(`/api/dataset/${slot}/anchor`, payload)
@@ -32,7 +39,14 @@ export const updateTargetAPI = (slot: string, target: string) => {
     return _put(`/api/dataset/${slot}/target`, payload)
 }
 
+// guava operation triggers
 export const triggerBSDAPI = () => _get('api/guava/bsd')
+
+export const triggerDispAPI = () => _get('api/guava/disp')
+
+export const triggerSepDAPI = () => _get('api/guava/sepd')
+
+export const triggerSepDNAPI = () => _get('api/guava/sepdn')
 
 
 // --- BASE METHODS

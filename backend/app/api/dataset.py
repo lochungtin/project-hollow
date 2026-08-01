@@ -1,3 +1,4 @@
+import guava_rt as gv
 import numpy as np
 from fastapi import APIRouter, HTTPException, UploadFile
 
@@ -13,6 +14,17 @@ from ..storage import (
 from .payload import AnchorPayload, TargetPayload, VisibilityPayload
 
 router = APIRouter(prefix="/api/dataset", tags=["datasets"])
+
+
+# --- REHYDRATION
+@router.get("/all")
+def rehydrate():
+    A = getDataset("A")
+    B = getDataset("B")
+    return {
+        "A": {} if A is None else A.summary(),
+        "B": {} if B is None else B.summary(),
+    }
 
 
 # --- DATASET
@@ -85,6 +97,5 @@ def update_scan_visibility(slot: str, body: TargetPayload):
 def update_scan_visibility(slot: str, body: AnchorPayload):
     dataset = getDataset(slot)
     dataset.anchorID = body.id
-    print(dataset.anchorID)
     dataset.anchor = np.asarray([body.x, body.y, body.z]).astype(int)
     return dataset.summary()
