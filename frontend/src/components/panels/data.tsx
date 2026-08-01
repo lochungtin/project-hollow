@@ -8,6 +8,44 @@ import Switch from '../ui/Switch'
 import './data.css'
 
 
+const parseContoursNumDiff = (
+    A: any,
+    B: any, 
+    field: string,
+    scaleA: number,
+    scaleB: number,
+    doScale: boolean
+) => {
+    scaleA = doScale ? scaleA : 1
+    scaleB = doScale ? scaleB : 1
+
+    const rt: any = {}
+    const colors: number[][] = []
+    
+    Object.values(A).forEach((c: any) => {
+        rt[c.name] = {'A': c[field] / scaleA, 'B': '-', 'abs': '-', 'perc': '-'}
+        colors.push(c.color)
+    })
+    Object.values(B).forEach((c: any) => {
+        if (!(c.name in rt))
+            rt[c.name] = {'A': '-', 'B': '-', 'abs': '-', 'perc': '-'}
+        else {
+            rt[c.name]['B'] = c[field] / scaleB
+            rt[c.name]['abs'] = rt[c.name]['B'] - rt[c.name]['A']
+            rt[c.name]['perc'] = rt[c.name]['abs'] / rt[c.name]['A'] * 100
+            colors.push(c.color)
+        }
+            
+    })
+
+    return {
+        'colors': colors,
+        'rowNames': Object.keys(rt),
+        'colNames': ['Dataset A', 'Dataset B', 'Abs Diff', '% Diff'],
+        'data': Object.values(rt).map((grp: any) => Object.values(grp))
+    }
+}
+
 const Card = ({badge, title, children} : {badge: string, title: string, children?: React.ReactNode}) => {
     const [showing, setShowing] = useState(true)
     
@@ -89,45 +127,7 @@ const Figure = () => {
 
 }
 
-
-const parseContoursNumDiff = (
-    A: any,
-    B: any, 
-    field: string,
-    scaleA: number,
-    scaleB: number,
-    doScale: boolean
-) => {
-    scaleA = doScale ? scaleA : 1
-    scaleB = doScale ? scaleB : 1
-
-    const rt: any = {}
-    const colors: number[][] = []
-    
-    Object.values(A).forEach((c: any) => {
-        rt[c.name] = {'A': c[field] / scaleA, 'B': '-', 'abs': '-', 'perc': '-'}
-        colors.push(c.color)
-    })
-    Object.values(B).forEach((c: any) => {
-        if (!(c.name in rt))
-            rt[c.name] = {'A': '-', 'B': '-', 'abs': '-', 'perc': '-'}
-        else {
-            rt[c.name]['B'] = c[field] / scaleB
-            rt[c.name]['abs'] = rt[c.name]['B'] - rt[c.name]['A']
-            rt[c.name]['perc'] = rt[c.name]['abs'] / rt[c.name]['A'] * 100
-            colors.push(c.color)
-        }
-            
-    })
-    return {
-        'colors': colors,
-        'rowNames': Object.keys(rt),
-        'colNames': ['Dataset A', 'Dataset B', 'Abs Diff', '% Diff'],
-        'data': Object.values(rt).map((grp: any) => Object.values(grp))
-    }
-}
-
-const Fallback = () => <div className='data-card-no-data'><span>Upload contours to start analysing</span></div>
+const Fallback = ({text}: {text: string}) => <div className='data-card-no-data'><span>{text}</span></div>
 
 const DataPane = () => {
     const [open, setOpen] = useState(true)
@@ -143,6 +143,9 @@ const DataPane = () => {
     const A = _A?.contours ?? {}
     const B = _B?.contours ?? {}
 
+    const emptyA = Object.keys(A).length === 0
+    const emptyB = Object.keys(B).length === 0
+
     const aVolScale = Math.pow(_A?.scan.spacing[0] ?? 1, 3)
     const bVolScale = Math.pow(_B?.scan.spacing[0] ?? 1, 3)
     const aSAScale = Math.pow(_A?.scan.spacing[0] ?? 1, 2)
@@ -150,6 +153,9 @@ const DataPane = () => {
 
     const volData = parseContoursNumDiff(A, B, 'volume', aVolScale, bVolScale, scaleVol)
     const saData = parseContoursNumDiff(A, B, 'surface_area', aSAScale, bSAScale, scaleSA)
+
+    const bsdData = state.analysis?.bsd ?? 1
+    console.log(bsdData)
 
     return (
         <aside className='data-pane-root'>
@@ -160,21 +166,42 @@ const DataPane = () => {
                 <Card badge='VOL' title='Volume'>
                     {volData.data.length > 0 ?
                         <Table {...volData} scale={scaleVol} setScale={setScaleVol} decorator={[2, 3]}/> :
-                        <Fallback />
+                        <Fallback text='Upload contours to start analysing' />
                     }
                 </Card>
                 <Card badge='SA' title='Surface Area'>
                     {saData.data.length > 0 ?
                         <Table {...saData} scale={scaleSA} setScale={setScaleSA} decorator={[2, 3]}/> :
-                        <Fallback />
+                        <Fallback text='Upload contours to start analysing' />
                     }
                 </Card>
                 <Card badge='BSD' title='Bidirectional Surface Discrepancy'>
+
+
+                    {(emptyA&&emptyB) && <Fallback text='Upload contours to start analysing' />}
+                    {(emptyA||emptyB)&&!(emptyA&&emptyB) && <Fallback text='Process requires both RTStructs to start' />}
                 </Card>
-                <Card badge='DISP' title='ROI Relative Displacement'></Card>
-                <Card badge='SD' title='Separation Distance'></Card>
-                <Card badge='DiVH' title='Distance Volume Histogram'></Card>
-                <Card badge='SD-N' title='Separation Distance - Nearside Surface'></Card>
+                <Card badge='DISP' title='ROI Relative Displacement'>
+
+
+                    {(emptyA&&emptyB) && <Fallback text='Upload contours to start analysing' />}
+                    {(emptyA||emptyB)&&!(emptyA&&emptyB) && <Fallback text='Process requires both RTStructs to start' />}
+                </Card>
+                <Card badge='SD' title='Separation Distance'>
+
+
+                    <Fallback text='Upload contours to start analysing' />
+                </Card>
+                <Card badge='DiVH' title='Distance Volume Histogram'>
+
+
+                    <Fallback text='Upload contours to start analysing' />
+                </Card>
+                <Card badge='SD-N' title='Separation Distance - Nearside Surface'>
+
+
+                    <Fallback text='Upload contours to start analysing' />
+                </Card>
             </main>
         </aside>
     )

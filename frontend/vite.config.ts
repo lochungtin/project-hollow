@@ -1,6 +1,6 @@
-import react from '@vitejs/plugin-react'
-import { defineConfig } from 'vite'
-import Terminal from 'vite-plugin-terminal'
+import react from '@vitejs/plugin-react';
+import { defineConfig } from 'vite';
+import Terminal from 'vite-plugin-terminal';
 
 export default defineConfig({
   plugins: [

@@ -1,31 +1,38 @@
 // --- EXPOSED APIS
-export const getDeviceAPI = () => _get('api/device')
+export const getDeviceAPI = () => _get('api/guava/device')
 
 export const uploadDicomAPI = (slot: string, files: FileList | File[]) => {
     const body = new FormData()
     Array.from(files).forEach((f) => body.append('files', f))
-    return _post(`api/${slot}/dicom`, body)
+    return _post(`api/dataset/${slot}/dicom`, body)
 }
 
 export const uploadRTStructAPI = (slot: string, file: File) => {
     const body = new FormData()
     body.append('file', file)
-    return _post(`api/${slot}/rtstruct`, body)
+    return _post(`api/dataset/${slot}/rtstruct`, body)
 }
 
-export const deleteDatasetAPI = (slot: string) => _del(`api/${slot}`)
+export const deleteDatasetAPI = (slot: string) => _del(`api/dataset/${slot}`)
 
 export const updateVisibilityAPI = (slot: string, type: string, visible: boolean, id?: string) => {
     const payload = {"visibility": visible}
     if (id)
-        return _put(`/api/${slot}/${type}/${id}/visibility`, payload)
-    return _put(`/api/${slot}/${type}/visibility`, payload)
+        return _put(`/api/dataset/${slot}/${type}/${id}/visibility`, payload)
+    return _put(`/api/dataset/${slot}/${type}/visibility`, payload)
 }
 
-export const updateAnchorAPI = (slot: string, anchor: number[]) => {
-    const payload = {"x": anchor[0], "y": anchor[1], "z": anchor[2]}
-    return _put(`/api/${slot}/anchor`, payload)
+export const updateAnchorAPI = (slot: string, anchor: number[], id: string) => {
+    const payload = {"x": anchor[0], "y": anchor[1], "z": anchor[2], "id": id}
+    return _put(`/api/dataset/${slot}/anchor`, payload)
 }
+
+export const updateTargetAPI = (slot: string, target: string) => {
+    const payload = {"id": target}
+    return _put(`/api/dataset/${slot}/target`, payload)
+}
+
+export const triggerBSDAPI = () => _get('api/guava/bsd')
 
 
 // --- BASE METHODS

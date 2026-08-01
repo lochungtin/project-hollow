@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import { deleteDatasetAPI, getDeviceAPI, updateAnchorAPI, updateVisibilityAPI, uploadDicomAPI, uploadRTStructAPI } from './api/client'
+import { deleteDatasetAPI, getDeviceAPI, triggerBSDAPI, updateAnchorAPI, updateTargetAPI, updateVisibilityAPI, uploadDicomAPI, uploadRTStructAPI } from './api/client'
 
 
 const AppStateContext = createContext<any>({})
@@ -12,7 +12,7 @@ export const useAppState = () =>  {
 }
 
 export const AppStateProvider = ({ children }: { children: any })  => {
-	const [device, setDevice] = useState("")
+	const [device, setDevice] = useState("Loading...")
 
 	const [dataset, setDataset] = useState({"A": null, "B": null})
 	const [uploading, setUploading] = useState({"A": false, "B": false})
@@ -63,7 +63,6 @@ export const AppStateProvider = ({ children }: { children: any })  => {
 		try {
 			await deleteDatasetAPI(slot)
 			setDataset((prev) => ({ ...prev, [slot]: null }))
-			setHaveContours((prev) => ({ ...prev, [slot]: false }))
 		} catch (err) {
 			console.error(err)
 		}		
@@ -90,9 +89,9 @@ export const AppStateProvider = ({ children }: { children: any })  => {
 		setLocalAnchorPX((prev) => ({...prev, [slot]: ints}))
 	}
 
-	const updateAnchor = useCallback(async (slot: string, anchor: number[]) => {
+	const updateAnchor = useCallback(async (slot: string, anchor: number[], id: string = "unknown") => {
 		try {
-			const ds = await updateAnchorAPI(slot, anchor)
+			const ds = await updateAnchorAPI(slot, anchor, id)
 
 			const lAnchorMM = ds.anchor.map((x: number) => Math.round(x / ds.scan.spacing[0]))
 			const lAnchorPX = ds.anchor
@@ -106,18 +105,41 @@ export const AppStateProvider = ({ children }: { children: any })  => {
 		}
 	}, [])
 
+	// --- UPDATE TARGET
+	const updateTarget = useCallback(async (slot: string, target:string) => {
+		try {
+			const ds = await updateTargetAPI(slot, target)
+			setDataset((prev) => ({...prev, [slot]: ds}))
+		} catch (err) {
+			console.error(JSON.stringify(err))
+		}
+	}, [])
+
+	// --- GUAVA OPERATIONS
+	const triggerBSD = useCallback(async () => {
+		try {
+			const res = await triggerBSDAPI()
+			console.log(res)
+		} catch (err) {
+			console.error(JSON.stringify(err))
+		}
+	}, [])
+
+
 	const value = useMemo(() => ({
 		device,
 		uploading,dataset,
 		uploadDicom, uploadRTStruct, deleteDataset,
 		updateVisibility,
-		updateAnchor, localAnchorMM, updateLocalAnchorMM, localAnchorPX, updateLocalAnchorPX
+		updateAnchor, localAnchorMM, updateLocalAnchorMM, localAnchorPX, updateLocalAnchorPX,
+		updateTarget,
 	}), [
 		device,
 		uploading,dataset,
 		uploadDicom, uploadRTStruct, deleteDataset,
 		updateVisibility,
-		updateAnchor, localAnchorMM, updateLocalAnchorMM, localAnchorPX, updateLocalAnchorPX
+		updateAnchor, localAnchorMM, updateLocalAnchorMM, localAnchorPX, updateLocalAnchorPX,
+		updateTarget,
 	])
 
 	return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>

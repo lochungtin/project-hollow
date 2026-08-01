@@ -14,6 +14,8 @@ from .scan import Scan
 class Dataset:
     slot: str
     scan: Scan
+    targetID: str = "unknown"
+    anchorID: str = "unknown"
     anchor: np.ndarray = field(default_factory=lambda: np.zeros(3, float))
     alignment: np.ndarray = field(default_factory=lambda: np.zeros(3, float))
     contours: dict[str, Contour] = field(default_factory=dict)
@@ -30,6 +32,8 @@ class Dataset:
         return {
             "slot": self.slot,
             "scan": self.scan.summary(),
+            "targetID": self.targetID,
+            "anchorID": self.anchorID,
             "anchor": self.anchor.tolist(),
             "alignment": self.alignment.tolist(),
             "render": {

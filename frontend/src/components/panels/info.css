@@ -273,7 +273,15 @@
 }
 
 .info-contour-action-img {
-    opacity: 0.5;
+    filter: invert(46%) sepia(7%) saturate(2940%) hue-rotate(353deg) brightness(94%) contrast(93%);
     width: 15px;
     height: 15px;
+}
+
+.info-contour-action-img-selected {
+    filter: invert(82%) sepia(67%) saturate(3449%) hue-rotate(327deg) brightness(98%) contrast(94%);
+}
+
+.info-contour-action-img-unselected {
+    filter: invert(25%) sepia(6%) saturate(2866%) hue-rotate(353deg) brightness(95%) contrast(91%);
 }

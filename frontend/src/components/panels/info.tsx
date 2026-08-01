@@ -139,11 +139,12 @@ const ContentLoaded = ({slot}: {slot: string}) => {
         console.log('_onClickContourAnchor', slot, id)
 
         const current = state.dataset[slot].contours[id].center_of_mass
-        state.updateAnchor(slot, current)
+        state.updateAnchor(slot, current, id)
     }
     const _onClickContourTarget = (e: any, slot: string, id: number) => {
         console.log('_onClickContourTarget', slot, id)
-        e.stopPropagation()
+        
+        state.updateTarget(slot, id)
     }
     const _onClickContourSelect = (e: any, slot: string, id: number) => {
         console.log('_onClickContourSelect', slot, id)
@@ -208,20 +209,32 @@ const ContentLoaded = ({slot}: {slot: string}) => {
 
             {contours.length == 0 && <footer className='info-card-footer'>Load contours for more options.</footer>}
             {contours.length != 0 && <div className='info-contour-container'>
-                {contours.map((c: any) => {
+                {contours.map((c: any) => {       
+                    let anchorDecorator = ''
+                    if (c.id === ds.anchorID)
+                        anchorDecorator = 'info-contour-action-img-selected'
+                    else if (ds.anchorID !== 'unknown')
+                        anchorDecorator = 'info-contour-action-img-unselected'
+
+                    let targetDecorator = ''
+                    if (c.id === ds.targetID)
+                        targetDecorator = 'info-contour-action-img-selected'
+                    else if (ds.targetID !== 'unknown')
+                        targetDecorator = 'info-contour-action-img-unselected'
+
                     return <div key={c.id} className="info-contour-item-container">
                             <button  className='info-contour-item' onClick={(e) => _onClickContour(e, slot, c.id)}>
-                                <div className={`info-contour-label ${c.visible % 7 ? 'info-contour-label-active' : ''}`}>
+                                <div className={`info-contour-label ${c.visible ? 'info-contour-label-active' : ''}`}>
                                     <div className='info-contour-badge' style={{backgroundColor: rgb2hex(c.color)}}></div>
                                     <span className='info-contour-name'>{c.name}</span>
                                 </div>
                             </button>
                             <div className='info-contour-action-container'>
                                 <button className='info-contour-action' onClick={(e) => _onClickContourAnchor(e, slot, c.id)}>
-                                    <img className='info-contour-action-img'src={Anchor} alt="A"/>
+                                    <img className={`info-contour-action-img ${anchorDecorator}`} src={Anchor} alt="A" />
                                 </button>
                                 <button className='info-contour-action' onClick={(e) => _onClickContourTarget(e, slot, c.id)}>
-                                    <img className='info-contour-action-img'src={Target} alt="T"/>
+                                    <img className={`info-contour-action-img ${targetDecorator}`} src={Target} alt="T" />
                                 </button>
                                 <button className='info-contour-action' onClick={(e) => _onClickContourSelect(e, slot, c.id)}>
                                     <img className='info-contour-action-img'src={Select} alt="S"/>
