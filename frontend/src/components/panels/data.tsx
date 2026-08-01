@@ -29,19 +29,28 @@ const parseContoursNumDiff = (
     const colors: number[][] = []
     
     Object.values(A).forEach((c: any) => {
-        rt[c.name] = {'A': c[field] / scaleA, 'B': '-', 'abs': '-', 'perc': '-'}
-        colors.push(c.color)
-    })
-    Object.values(B).forEach((c: any) => {
-        if (!(c.name in rt))
-            rt[c.name] = {'A': '-', 'B': '-', 'abs': '-', 'perc': '-'}
-        else {
-            rt[c.name]['B'] = c[field] / scaleB
-            rt[c.name]['abs'] = rt[c.name]['B'] - rt[c.name]['A']
-            rt[c.name]['perc'] = rt[c.name]['abs'] / rt[c.name]['A'] * 100
+        const val = c[field] / scaleA
+        if (!(c.name in rt)) {
+            rt[c.name] = {'A': val, 'B': '-', 'abs': '-', 'perc': '-'}
             colors.push(c.color)
         }
-            
+        else {
+            rt[c.name]['A'] = val
+            rt[c.name]['abs'] = rt[c.name]['B'] - val
+            rt[c.name]['perc'] = rt[c.name]['abs'] / val * 100
+        }
+    })
+    Object.values(B).forEach((c: any) => {
+        const val = c[field] / scaleB
+        if (!(c.name in rt)) {
+            rt[c.name] = {'A': '-', 'B': val, 'abs': '-', 'perc': '-'}
+            colors.push(c.color)
+        }
+        else {
+            rt[c.name]['B'] = val
+            rt[c.name]['abs'] = val - rt[c.name]['A']
+            rt[c.name]['perc'] = rt[c.name]['abs'] / rt[c.name]['A'] * 100
+        }   
     })
 
     return {
