@@ -1,3 +1,5 @@
+import { Dataset, HTTPPayload } from "../types"
+
 // --- EXPOSED APIS
 // rehydrate cached data
 export const rehydrateAPI = () => _get('api/dataset/all')
@@ -15,7 +17,7 @@ export const uploadDicomAPI = (slot: string, files: FileList | File[]) => {
 export const uploadRTStructAPI = (slot: string, file: File) => {
     const body = new FormData()
     body.append('file', file)
-    return _post(`api/dataset/${slot}/rtstruct`, body)
+    return _post(`api/dataset/${slot}/rtstruct`, body) as Promise<Dataset>
 }
 
 export const deleteDatasetAPI = (slot: string) => _del(`api/dataset/${slot}`)
@@ -50,7 +52,7 @@ export const triggerSepDNAPI = () => _get('api/guava/sepdn')
 
 
 // --- BASE METHODS
-const _base_api = async(path: string, header?: any) => {
+const _base_api = async(path: string, header?: RequestInit) => {
     const res = await fetch(path, header)
     
     if (!res.ok) {
@@ -69,7 +71,7 @@ const _base_api = async(path: string, header?: any) => {
 
 const _get = async (path: string) => _base_api(path)
 
-const _post = async (path: string, body: any) => _base_api(
+const _post = async (path: string, body: BodyInit) => _base_api(
     path,
     {
         method: 'POST',
@@ -77,7 +79,7 @@ const _post = async (path: string, body: any) => _base_api(
     }
 )
 
-const _put = async (path: string, body: any) => _base_api(
+const _put = async (path: string, body: HTTPPayload) => _base_api(
     path,
     {
         headers: {'Content-Type': 'application/json'},

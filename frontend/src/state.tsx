@@ -1,24 +1,25 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { deleteDatasetAPI, getDeviceAPI, rehydrateAPI, triggerBSDAPI, triggerDispAPI, triggerSepDAPI, triggerSepDNAPI, updateAnchorAPI, updateTargetAPI, updateVisibilityAPI, uploadDicomAPI, uploadRTStructAPI } from './api/client'
+import { Dataset } from './types'
 
 
 const AppStateContext = createContext<any>({})
 
-export const useAppState = () =>  {
+export const useAppState = () => {
 	const ctx = useContext(AppStateContext)
 	if (!ctx)
 		throw new Error('useAppState must be used within AppStateProvider')
 	return ctx
 }
 
-export const AppStateProvider = ({ children }: { children: any })  => {
+export const AppStateProvider = ({ children }: { children: any }) => {
 	const [device, setDevice] = useState("Loading...")
 
-	const [dataset, setDataset] = useState({"A": null, "B": null})
-	const [uploading, setUploading] = useState({"A": false, "B": false})
+	const [dataset, setDataset] = useState({ "A": null, "B": null })
+	const [uploading, setUploading] = useState({ "A": false, "B": false })
 
-	const [localAnchorMM, setLocalAnchorMM] = useState({"A": [0, 0, 0], "B": [0, 0, 0]})
-    const [localAnchorPX, setLocalAnchorPX] = useState({"A": [0, 0, 0], "B": [0, 0, 0]})
+	const [localAnchorMM, setLocalAnchorMM] = useState({ "A": [0, 0, 0], "B": [0, 0, 0] })
+	const [localAnchorPX, setLocalAnchorPX] = useState({ "A": [0, 0, 0], "B": [0, 0, 0] })
 
 	const [bsdRes, setBSDRes] = useState({})
 	const [dispRes, setDispRes] = useState({})
@@ -28,78 +29,78 @@ export const AppStateProvider = ({ children }: { children: any })  => {
 
 	const rehydrate = useCallback(async () => {
 		try {
-			const res = await rehydrateAPI()
+			const res: { [key: string]: Dataset } = await rehydrateAPI()
 
-			Object.entries(res).forEach(([slot, ds]: [slot: string, ds: any]) => {
+			Object.entries(res).forEach(([slot, ds]: [slot: string, ds: Dataset]) => {
 				if (Object.keys(ds).length !== 0) {
-					const lAnchorMM = ds.anchor.map((x: number) => Math.round(x / ds.scan.spacing[0]))
+					const lAnchorMM = ds.anchor.map(x => Math.round(x / ds.scan.spacing[0]))
 					const lAnchorPX = ds.anchor
 
-					setDataset((prev) => ({...prev, [slot]: ds}))
-					setLocalAnchorMM((prev) => ({...prev, [slot]: lAnchorMM}))
-					setLocalAnchorPX((prev) => ({...prev, [slot]: lAnchorPX}))
+					setDataset((prev) => ({ ...prev, [slot]: ds }))
+					setLocalAnchorMM((prev) => ({ ...prev, [slot]: lAnchorMM }))
+					setLocalAnchorPX((prev) => ({ ...prev, [slot]: lAnchorPX }))
 				}
 			})
 		} catch {
-			setDataset({"A": null, "B": null})
-			setLocalAnchorMM({"A": [0, 0, 0], "B": [0, 0, 0]})
-			setLocalAnchorPX({"A": [0, 0, 0], "B": [0, 0, 0]})
+			setDataset({ "A": null, "B": null })
+			setLocalAnchorMM({ "A": [0, 0, 0], "B": [0, 0, 0] })
+			setLocalAnchorPX({ "A": [0, 0, 0], "B": [0, 0, 0] })
 		}
 	}, [])
 
 	useEffect(() => {
 		getDeviceAPI().then(setDevice)
 		rehydrate()
-		return () => {}
+		return () => { }
 	}, [])
 
 
 	// --- FILE UPLOAD
 	const uploadDicom = useCallback(async (slot: string, files: File[]) => {
-		setUploading((prev) => ({...prev, [slot]: true}))
+		setUploading((prev) => ({ ...prev, [slot]: true }))
 		try {
-			const ds = await uploadDicomAPI(slot, files)
+			const ds: Dataset = await uploadDicomAPI(slot, files)
 
-			const lAnchorMM = ds.anchor.map((x: number) => Math.round(x / ds.scan.spacing[0]))
+			const lAnchorMM = ds.anchor.map(x => Math.round(x / ds.scan.spacing[0]))
 			const lAnchorPX = ds.anchor
 
-			setDataset((prev) => ({...prev, [slot]: ds}))
-			setLocalAnchorMM((prev) => ({...prev, [slot]: lAnchorMM}))
-			setLocalAnchorPX((prev) => ({...prev, [slot]: lAnchorPX}))
-			
+			setDataset((prev) => ({ ...prev, [slot]: ds }))
+			setLocalAnchorMM((prev) => ({ ...prev, [slot]: lAnchorMM }))
+			setLocalAnchorPX((prev) => ({ ...prev, [slot]: lAnchorPX }))
+
 		} catch (err) {
 			console.error(JSON.stringify(err))
 		} finally {
-			setUploading((prev) => ({...prev, [slot]: false}))
+			setUploading((prev) => ({ ...prev, [slot]: false }))
 		}
 	}, [])
 
 	const uploadRTStruct = useCallback(async (slot: string, file: File) => {
-		setUploading((prev) => ({...prev, [slot]: true}))
+		setUploading((prev) => ({ ...prev, [slot]: true }))
 		try {
 			const ds = await uploadRTStructAPI(slot, file)
-			setDataset((prev) => ({...prev, [slot]: ds}))
+			setDataset((prev) => ({ ...prev, [slot]: ds }))
 		} catch (err) {
 			console.error(JSON.stringify(err))
 		} finally {
-			setUploading((prev) => ({...prev, [slot]: false}))
+			setUploading((prev) => ({ ...prev, [slot]: false }))
 		}
-	}, []) 
+	}, [])
 
-	const deleteDataset = useCallback(async (slot: string)=> {
+	const deleteDataset = useCallback(async (slot: string) => {
 		try {
 			await deleteDatasetAPI(slot)
 			setDataset((prev) => ({ ...prev, [slot]: null }))
 		} catch (err) {
 			console.error(err)
-		}		
-	}, []) 
+		}
+	}, [])
 
 	// --- TOGGLE VISIBILITY
 	const updateVisibility = useCallback(async (slot: string, type: string, visible: boolean, id?: string) => {
 		try {
 			const ds = await updateVisibilityAPI(slot, type, visible, id)
-			setDataset((prev) => ({...prev, [slot]: ds}))
+			setDataset((prev) => ({ ...prev, [slot]: ds }))
 		} catch (err) {
 			console.error(JSON.stringify(err))
 		}
@@ -108,12 +109,12 @@ export const AppStateProvider = ({ children }: { children: any })  => {
 	// --- UPDATE ANCHOR
 	const updateLocalAnchorMM = (slot: string, anchor: number[]) => {
 		const ints = anchor.map(Math.round)
-		setLocalAnchorMM((prev) => ({...prev, [slot]: ints}))
+		setLocalAnchorMM((prev) => ({ ...prev, [slot]: ints }))
 	}
 
 	const updateLocalAnchorPX = (slot: string, anchor: number[]) => {
 		const ints = anchor.map(Math.round)
-		setLocalAnchorPX((prev) => ({...prev, [slot]: ints}))
+		setLocalAnchorPX((prev) => ({ ...prev, [slot]: ints }))
 	}
 
 	const updateAnchor = useCallback(async (slot: string, anchor: number[], id: string = "unknown") => {
@@ -123,9 +124,9 @@ export const AppStateProvider = ({ children }: { children: any })  => {
 			const lAnchorMM = ds.anchor.map((x: number) => Math.round(x / ds.scan.spacing[0]))
 			const lAnchorPX = ds.anchor
 
-			setDataset((prev) => ({...prev, [slot]: ds}))
-			setLocalAnchorMM((prev) => ({...prev, [slot]: lAnchorMM}))
-			setLocalAnchorPX((prev) => ({...prev, [slot]: lAnchorPX}))
+			setDataset((prev) => ({ ...prev, [slot]: ds }))
+			setLocalAnchorMM((prev) => ({ ...prev, [slot]: lAnchorMM }))
+			setLocalAnchorPX((prev) => ({ ...prev, [slot]: lAnchorPX }))
 
 		} catch (err) {
 			console.error(JSON.stringify(err))
@@ -133,10 +134,10 @@ export const AppStateProvider = ({ children }: { children: any })  => {
 	}, [])
 
 	// --- UPDATE TARGET
-	const updateTarget = useCallback(async (slot: string, target:string) => {
+	const updateTarget = useCallback(async (slot: string, target: string) => {
 		try {
 			const ds = await updateTargetAPI(slot, target)
-			setDataset((prev) => ({...prev, [slot]: ds}))
+			setDataset((prev) => ({ ...prev, [slot]: ds }))
 		} catch (err) {
 			console.error(JSON.stringify(err))
 		}
@@ -183,7 +184,7 @@ export const AppStateProvider = ({ children }: { children: any })  => {
 
 	const value = useMemo(() => ({
 		device,
-		uploading,dataset,
+		uploading, dataset,
 		uploadDicom, uploadRTStruct, deleteDataset,
 		updateVisibility,
 		updateAnchor, localAnchorMM, updateLocalAnchorMM, localAnchorPX, updateLocalAnchorPX,
@@ -194,7 +195,7 @@ export const AppStateProvider = ({ children }: { children: any })  => {
 		triggerSepDN, sepDNRes,
 	}), [
 		device,
-		uploading,dataset,
+		uploading, dataset,
 		uploadDicom, uploadRTStruct, deleteDataset,
 		updateVisibility,
 		updateAnchor, localAnchorMM, updateLocalAnchorMM, localAnchorPX, updateLocalAnchorPX,
