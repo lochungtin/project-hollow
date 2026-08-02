@@ -1,5 +1,7 @@
 import torch
 
+from .queue import Queue
+
 # --- STORAGE
 _DEV = "cuda" if torch.cuda.is_available() else "cpu"
 _DATASET_STORAGE = {
@@ -11,6 +13,9 @@ _GUAVA_STORAGE = {
     "regions": {"A": None, "B": None},
     "metric": None,
 }
+
+# JOB QUEUE
+QUEUE = Queue()
 
 
 # --- GETTERS
