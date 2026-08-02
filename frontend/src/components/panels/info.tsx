@@ -5,17 +5,18 @@ import DMap from '../../icons/dmap.svg'
 import Select from '../../icons/select.svg'
 import Target from '../../icons/target.svg'
 import { useAppState } from '../../state'
+import { Dataset } from '../../types'
 import { rgb2hex } from '../ui/color'
 import './info.css'
 
 
-const ContentEmpty = ({slot}: {slot: string}) => {
-    const dicomUploadRef = useRef(null)
+const ContentEmpty = ({ slot }: { slot: string }) => {
+    const dicomUploadRef: React.MutableRefObject<any> = useRef(null)
 
     const state = useAppState()
 
     // --- UPLOAD DICOM FILES
-    const _onClickDcmUpload = (e: any, slot: string) => {
+    const _onClickDcmUpload = (e: React.MouseEvent, slot: string) => {
         console.log('_onDCMClickUpload', slot)
 
         if (state.uploading[slot])
@@ -35,15 +36,15 @@ const ContentEmpty = ({slot}: {slot: string}) => {
     return (
         <>
             <main className='info-card-body'>
-                <button className='info-dcm-upload' onClick={(e) => _onClickDcmUpload(e, slot)}>
+                <button className='info-dcm-upload' onClick={e => _onClickDcmUpload(e, slot)}>
                     {state.uploading[slot] ? 'Uploading ...' : 'Load DICOM Series'}
                 </button>
-                <input 
+                <input
                     ref={dicomUploadRef}
                     type='file'
                     multiple accept='.dcm,application/dicom'
                     style={{ display: 'none' }}
-                    onChange={(e) => _onDcmUpload(e, slot)}
+                    onChange={e => _onDcmUpload(e, slot)}
                 />
             </main>
             <footer className='info-card-footer'>
@@ -53,12 +54,13 @@ const ContentEmpty = ({slot}: {slot: string}) => {
     )
 }
 
-const ContentLoaded = ({slot}: {slot: string}) => {
-    const structUploadRef = useRef(null)
+const ContentLoaded = ({ slot }: { slot: string }) => {
+    const structUploadRef: React.MutableRefObject<any> = useRef(null)
 
     const state = useAppState()
 
-    const ds = state.dataset[slot]
+    const ds: Dataset = state.dataset[slot] as Dataset
+
     const scan = ds.scan
     const contours = Object.values(ds.contours)
 
@@ -67,7 +69,7 @@ const ContentLoaded = ({slot}: {slot: string}) => {
     const spacing = scan.spacing.map((x: number) => x.toFixed(2)).join(' x ')
 
     // --- UPLOAD RT STRUCT FILES
-    const _onClickRTStructUpload = (e: any, slot: string) => {
+    const _onClickRTStructUpload = (e: React.MouseEvent, slot: string) => {
         console.log('_onRTStructClickUpload', slot)
 
         if (state.uploading[slot])
@@ -76,8 +78,8 @@ const ContentLoaded = ({slot}: {slot: string}) => {
         if (structUploadRef.current)
             structUploadRef.current.click()
     }
-    const _onRTStructUpload = (e: any, slot: string) => {
-        console.log('_onRTStructUpload', slot, e.target.files.length)
+    const _onRTStructUpload = (e: React.ChangeEvent<HTMLInputElement>, slot: string) => {
+        console.log('_onRTStructUpload', slot, e.target.files?.length)
 
         if (e.target.files && e.target.files.length == 1)
             state.uploadRTStruct(slot, e.target.files[0])
@@ -85,14 +87,14 @@ const ContentLoaded = ({slot}: {slot: string}) => {
     }
 
     // --- ANCHOR CHANGES MM
-    const _onAnchorMMChange = (e: any, slot: string, axes: number) => {
+    const _onAnchorMMChange = (e: React.ChangeEvent<HTMLInputElement>, slot: string, axes: number) => {
         console.log('_onAnchorMMChange', slot, axes, e.target.value)
 
         let temp = [...state.localAnchorMM[slot]]
         temp[axes] = parseFloat(e.target.value)
         state.updateLocalAnchorMM(slot, temp)
     }
-    const _onAnchorMMBlur = (e: any, slot: string, axes: number) => {
+    const _onAnchorMMBlur = (e: React.ChangeEvent<HTMLInputElement>, slot: string, axes: number) => {
         console.log('_onAnchorMMBlur', slot, axes, e.target.value)
 
         let temp = [...state.localAnchorMM[slot]]
@@ -104,16 +106,16 @@ const ContentLoaded = ({slot}: {slot: string}) => {
     }
 
     // --- ANCHOR CHANGES PX
-    const _onAnchorPXChange = (e: any, slot: string, axes: number) => {
+    const _onAnchorPXChange = (e: React.ChangeEvent<HTMLInputElement>, slot: string, axes: number) => {
         console.log('_onAnchorPXChange', slot, axes, e.target.value)
 
         let temp = [...state.localAnchorPX[slot]]
         temp[axes] = parseFloat(e.target.value)
         state.updateLocalAnchorPX(slot, temp)
     }
-    const _onAnchorPXBlur =  (e: any, slot: string, axes: number) => {
+    const _onAnchorPXBlur = (e: React.ChangeEvent<HTMLInputElement>, slot: string, axes: number) => {
         console.log('_onAnchorPXBlur', slot, axes)
-        
+
         let temp = [...state.localAnchorPX[slot]]
         temp[axes] = parseFloat(e.target.value)
         state.updateLocalAnchorPX(slot, temp)
@@ -123,34 +125,34 @@ const ContentLoaded = ({slot}: {slot: string}) => {
     }
 
     // --- ANCHOR UPDATE
-    const _onClickAnchorSet = (e: any, slot: string) => {
+    const _onClickAnchorSet = (e: React.MouseEvent, slot: string) => {
         console.log('_onClickAnchorUpdate', slot, state.localAnchorPX[slot])
 
         state.updateAnchor(slot, state.localAnchorPX[slot])
     }
 
     // --- CONTOUR ACTIONS
-    const _onClickContour = (e: any, slot: string, id: number) => {
+    const _onClickContour = (e: React.MouseEvent, slot: string, id: string) => {
         console.log('_onClickContour', slot, id)
-        const current = state.dataset[slot].contours[id].visible
+        const current = state.dataset[slot]?.contours[id].visible
         state.updateVisibility(slot, 'contour', !current, id)
     }
-    const _onClickContourAnchor = (e: any, slot: string, id: number) => {
+    const _onClickContourAnchor = (e: React.MouseEvent, slot: string, id: string) => {
         console.log('_onClickContourAnchor', slot, id)
 
-        const current = state.dataset[slot].contours[id].center_of_mass
+        const current = (state.dataset[slot] as Dataset).contours[id].center_of_mass
         state.updateAnchor(slot, current, id)
     }
-    const _onClickContourTarget = (e: any, slot: string, id: number) => {
+    const _onClickContourTarget = (e: React.MouseEvent, slot: string, id: string) => {
         console.log('_onClickContourTarget', slot, id)
-        
+
         state.updateTarget(slot, id)
     }
-    const _onClickContourSelect = (e: any, slot: string, id: number) => {
+    const _onClickContourSelect = (e: React.MouseEvent, slot: string, id: string) => {
         console.log('_onClickContourSelect', slot, id)
         e.stopPropagation()
     }
-    const _onClickContourDMap = (e: any, slot: string, id: number) => {
+    const _onClickContourDMap = (e: React.MouseEvent, slot: string, id: string) => {
         console.log('_onClickContourDMap', slot, id)
         e.stopPropagation()
     }
@@ -171,8 +173,8 @@ const ContentLoaded = ({slot}: {slot: string}) => {
                                 key={i}
                                 className='info-anchor-input mono'
                                 type='number'
-                                onChange={(e) => _onAnchorMMChange(e, slot, i)}
-                                onBlur={(e) => _onAnchorMMBlur(e, slot, i)}
+                                onChange={e => _onAnchorMMChange(e, slot, i)}
+                                onBlur={e => _onAnchorMMBlur(e, slot, i)}
                                 value={v}
                             />)}
                         </div>
@@ -184,32 +186,32 @@ const ContentLoaded = ({slot}: {slot: string}) => {
                                 key={i}
                                 className='info-anchor-input mono'
                                 type='number'
-                                onChange={(e) => _onAnchorPXChange(e, slot, i)}
-                                onBlur={(e) => _onAnchorPXBlur(e, slot, i)}
+                                onChange={e => _onAnchorPXChange(e, slot, i)}
+                                onBlur={e => _onAnchorPXBlur(e, slot, i)}
                                 value={v}
                             />)}
                         </div>
                     </div>
-                    <button className='info-anchor-set' onClick={(e) => _onClickAnchorSet(e, slot)}>Set Anchor</button>
+                    <button className='info-anchor-set' onClick={e => _onClickAnchorSet(e, slot)}>Set Anchor</button>
                 </div>
                 {contours.length != 0 && <span>Contours</span>}
                 {contours.length == 0 && <>
-                    <button className='info-dcm-upload' onClick={(e) => _onClickRTStructUpload(e, slot)}>
+                    <button className='info-dcm-upload' onClick={e => _onClickRTStructUpload(e, slot)}>
                         {state.uploading[slot] ? 'Uploading ...' : 'Load RTSTRUCT'}
                     </button>
-                    <input 
+                    <input
                         ref={structUploadRef}
                         type='file'
                         accept='.dcm,application/dicom'
                         style={{ display: 'none' }}
-                        onChange={(e) => _onRTStructUpload(e, slot)}
+                        onChange={e => _onRTStructUpload(e, slot)}
                     />
                 </>}
             </main>
 
             {contours.length == 0 && <footer className='info-card-footer'>Load contours for more options.</footer>}
             {contours.length != 0 && <div className='info-contour-container'>
-                {contours.map((c: any) => {       
+                {contours.map((c: any) => {
                     let anchorDecorator = ''
                     if (c.id === ds.anchorID)
                         anchorDecorator = 'info-contour-action-img-selected'
@@ -223,40 +225,40 @@ const ContentLoaded = ({slot}: {slot: string}) => {
                         targetDecorator = 'info-contour-action-img-unselected'
 
                     return <div key={c.id} className="info-contour-item-container">
-                            <button  className='info-contour-item' onClick={(e) => _onClickContour(e, slot, c.id)}>
-                                <div className={`info-contour-label ${c.visible ? 'info-contour-label-active' : ''}`}>
-                                    <div className='info-contour-badge' style={{backgroundColor: rgb2hex(c.color)}}></div>
-                                    <span className='info-contour-name'>{c.name}</span>
-                                </div>
-                            </button>
-                            <div className='info-contour-action-container'>
-                                <button className='info-contour-action' onClick={(e) => _onClickContourAnchor(e, slot, c.id)}>
-                                    <img className={`info-contour-action-img ${anchorDecorator}`} src={Anchor} alt="A" />
-                                </button>
-                                <button className='info-contour-action' onClick={(e) => _onClickContourTarget(e, slot, c.id)}>
-                                    <img className={`info-contour-action-img ${targetDecorator}`} src={Target} alt="T" />
-                                </button>
-                                <button className='info-contour-action' onClick={(e) => _onClickContourSelect(e, slot, c.id)}>
-                                    <img className='info-contour-action-img'src={Select} alt="S"/>
-                                </button>
-                                <button className='info-contour-action' onClick={(e) => _onClickContourDMap(e, slot, c.id)}>
-                                    <img className='info-contour-action-img'src={DMap} alt="D"/>
-                                </button>
+                        <button className='info-contour-item' onClick={e => _onClickContour(e, slot, c.id)}>
+                            <div className={`info-contour-label ${c.visible ? 'info-contour-label-active' : ''}`}>
+                                <div className='info-contour-badge' style={{ backgroundColor: rgb2hex(c.color) }}></div>
+                                <span className='info-contour-name'>{c.name}</span>
                             </div>
+                        </button>
+                        <div className='info-contour-action-container'>
+                            <button className='info-contour-action' onClick={e => _onClickContourAnchor(e, slot, c.id)}>
+                                <img className={`info-contour-action-img ${anchorDecorator}`} src={Anchor} alt="A" />
+                            </button>
+                            <button className='info-contour-action' onClick={e => _onClickContourTarget(e, slot, c.id)}>
+                                <img className={`info-contour-action-img ${targetDecorator}`} src={Target} alt="T" />
+                            </button>
+                            <button className='info-contour-action' onClick={e => _onClickContourSelect(e, slot, c.id)}>
+                                <img className='info-contour-action-img' src={Select} alt="S" />
+                            </button>
+                            <button className='info-contour-action' onClick={e => _onClickContourDMap(e, slot, c.id)}>
+                                <img className='info-contour-action-img' src={DMap} alt="D" />
+                            </button>
                         </div>
+                    </div>
                 })}
             </div>}
         </>
     )
 }
 
-const Card = ({slot}: {slot: string}) => {
+const Card = ({ slot }: { slot: string }) => {
     const state = useAppState()
     const ds = state.dataset[slot]
-    const visible = ds?.scan?.visible 
+    const visible = ds?.scan?.visible
 
     // --- TOGGLE VISIBILITY
-    const _onClickVisible = (e: any, slot: string) => {
+    const _onClickVisible = (e: React.MouseEvent, slot: string) => {
         console.log('_onClickVisible', slot)
 
         if (ds)
@@ -264,7 +266,7 @@ const Card = ({slot}: {slot: string}) => {
     }
 
     // --- CLOSE
-    const _onClickClose = (e: any, slot: string) => {
+    const _onClickClose = (e: React.MouseEvent, slot: string) => {
         console.log('_onClickClose', slot)
 
         state.deleteDataset(slot)
@@ -275,11 +277,11 @@ const Card = ({slot}: {slot: string}) => {
             <header className='info-card-header'>
                 <span className='info-card-badge'>{slot}</span>
                 <span className='info-card-name'>{ds ? `Dataset ${slot}` : 'Empty Slot'}</span>
-                <button className={`info-card-tag ${visible ? 'info-card-tag-active' : ''}`} onClick={(e) => _onClickVisible(e, slot)}>
+                <button className={`info-card-tag ${visible ? 'info-card-tag-active' : ''}`} onClick={e => _onClickVisible(e, slot)}>
                     <span className='info-card-tag-text'>{visible ? 'Enabled' : 'Disabled'}</span>
                 </button>
-                <button className='info-card-close' onClick={(e) => _onClickClose(e, slot)}>
-                   <img className='info-card-close-img' src={Close} alt='close' />
+                <button className='info-card-close' onClick={e => _onClickClose(e, slot)}>
+                    <img className='info-card-close-img' src={Close} alt='close' />
                 </button>
             </header>
             {ds && <ContentLoaded slot={slot} />}

@@ -2,22 +2,22 @@ import { Dataset, HTTPPayload } from "../types"
 
 // --- EXPOSED APIS
 // rehydrate cached data
-export const rehydrateAPI = () => _get('api/dataset/all')
+export const rehydrateAPI = (): Promise<{"A": Dataset | null, "B": Dataset | null}> => _get('api/dataset/all')
 
 // get computation device
-export const getDeviceAPI = () => _get('api/guava/device')
+export const getDeviceAPI = (): Promise<string> => _get('api/guava/device')
 
 // dicom dataset handling
-export const uploadDicomAPI = (slot: string, files: FileList | File[]) => {
+export const uploadDicomAPI = (slot: string, files: FileList | File[]): Promise<Dataset> => {
     const body = new FormData()
     Array.from(files).forEach((f) => body.append('files', f))
     return _post(`api/dataset/${slot}/dicom`, body)
 }
 
-export const uploadRTStructAPI = (slot: string, file: File) => {
+export const uploadRTStructAPI = (slot: string, file: File): Promise<Dataset> => {
     const body = new FormData()
     body.append('file', file)
-    return _post(`api/dataset/${slot}/rtstruct`, body) as Promise<Dataset>
+    return _post(`api/dataset/${slot}/rtstruct`, body)
 }
 
 export const deleteDatasetAPI = (slot: string) => _del(`api/dataset/${slot}`)
@@ -31,12 +31,12 @@ export const updateVisibilityAPI = (slot: string, type: string, visible: boolean
 }
 
 // target and anchor handling
-export const updateAnchorAPI = (slot: string, anchor: number[], id: string) => {
+export const updateAnchorAPI = (slot: string, anchor: number[], id: string): Promise<Dataset> => {
     const payload = {"x": anchor[0], "y": anchor[1], "z": anchor[2], "id": id}
     return _put(`/api/dataset/${slot}/anchor`, payload)
 }
 
-export const updateTargetAPI = (slot: string, target: string) => {
+export const updateTargetAPI = (slot: string, target: string): Promise<Dataset> => {
     const payload = {"id": target}
     return _put(`/api/dataset/${slot}/target`, payload)
 }

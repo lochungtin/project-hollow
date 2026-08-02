@@ -2,6 +2,42 @@ export type HTTPPayload = {
     [key: string]: any
 }
 
+
+export type AppState = {
+    'device': string,
+    
+    'uploading': { [key: string]: boolean },
+    'dataset': { [key: string]: Dataset | null },
+
+    'uploadDicom': (slot: string, files: File[] | FileList) => Promise<void>,
+    'uploadRTStruct': (slot: string, file: File) => Promise<void>,
+    'deleteDataset': (slot: string) => Promise<void>,
+
+    'updateVisibility': (slot: string, type: string, visible: boolean, id?: string) => Promise<void>,
+
+    'localAnchorMM': { [key: string]: number[] },
+    'localAnchorPX': { [key: string]: number[] },
+
+    'updateAnchor': (slot: string, anchor: number[], id?: string) => Promise<void>,
+    'updateLocalAnchorMM': (slot: string, anchor: number[]) => void,
+    'updateLocalAnchorPX': (slot: string, anchor: number[]) => void,
+
+    'updateTarget': (slot: string, target: string) => Promise<void>,
+
+    'bsdRes': { [key: string]: {"ASD": number, "HD95": number, "HD": number} },
+    'triggerBSD': () => Promise<void>,
+
+    'dispRes': {}
+    'triggerDisp': () => Promise<void>,
+
+    'sepDRes': {},
+    'triggerSepD': () => Promise<void>,
+
+    'sepDNRes': {},
+    'triggerSepDN': () => Promise<void>,
+}
+
+
 export type Dataset = {
     'slot': 'A' | 'B',
     'scan': Scan,

@@ -1,9 +1,9 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { deleteDatasetAPI, getDeviceAPI, rehydrateAPI, triggerBSDAPI, triggerDispAPI, triggerSepDAPI, triggerSepDNAPI, updateAnchorAPI, updateTargetAPI, updateVisibilityAPI, uploadDicomAPI, uploadRTStructAPI } from './api/client'
-import { Dataset } from './types'
+import { AppState, Dataset } from './types'
 
 
-const AppStateContext = createContext<any>({})
+const AppStateContext = createContext<AppState | null>(null)
 
 export const useAppState = () => {
 	const ctx = useContext(AppStateContext)
@@ -12,7 +12,7 @@ export const useAppState = () => {
 	return ctx
 }
 
-export const AppStateProvider = ({ children }: { children: any }) => {
+export const AppStateProvider = ({ children }: { children: React.ReactNode }) => {
 	const [device, setDevice] = useState("Loading...")
 
 	const [dataset, setDataset] = useState({ "A": null, "B": null })
@@ -29,10 +29,10 @@ export const AppStateProvider = ({ children }: { children: any }) => {
 
 	const rehydrate = useCallback(async () => {
 		try {
-			const res: { [key: string]: Dataset } = await rehydrateAPI()
+			const res = await rehydrateAPI()
 
-			Object.entries(res).forEach(([slot, ds]: [slot: string, ds: Dataset]) => {
-				if (Object.keys(ds).length !== 0) {
+			Object.entries(res).forEach(([slot, ds]) => {
+				if (ds) {
 					const lAnchorMM = ds.anchor.map(x => Math.round(x / ds.scan.spacing[0]))
 					const lAnchorPX = ds.anchor
 
@@ -56,7 +56,7 @@ export const AppStateProvider = ({ children }: { children: any }) => {
 
 
 	// --- FILE UPLOAD
-	const uploadDicom = useCallback(async (slot: string, files: File[]) => {
+	const uploadDicom = useCallback(async (slot: string, files: File[] | FileList) => {
 		setUploading((prev) => ({ ...prev, [slot]: true }))
 		try {
 			const ds: Dataset = await uploadDicomAPI(slot, files)
@@ -187,7 +187,8 @@ export const AppStateProvider = ({ children }: { children: any }) => {
 		uploading, dataset,
 		uploadDicom, uploadRTStruct, deleteDataset,
 		updateVisibility,
-		updateAnchor, localAnchorMM, updateLocalAnchorMM, localAnchorPX, updateLocalAnchorPX,
+		updateLocalAnchorMM, updateLocalAnchorPX,
+		updateAnchor, localAnchorMM, localAnchorPX,
 		updateTarget,
 		triggerBSD, bsdRes,
 		triggerDisp, dispRes,
@@ -198,7 +199,8 @@ export const AppStateProvider = ({ children }: { children: any }) => {
 		uploading, dataset,
 		uploadDicom, uploadRTStruct, deleteDataset,
 		updateVisibility,
-		updateAnchor, localAnchorMM, updateLocalAnchorMM, localAnchorPX, updateLocalAnchorPX,
+		updateLocalAnchorMM, updateLocalAnchorPX,
+		updateAnchor, localAnchorMM, localAnchorPX,
 		updateTarget,
 		triggerBSD, bsdRes,
 		triggerDisp, dispRes,

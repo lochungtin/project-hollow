@@ -22,8 +22,8 @@ def rehydrate():
     A = getDataset("A")
     B = getDataset("B")
     return {
-        "A": {} if A is None else A.summary(),
-        "B": {} if B is None else B.summary(),
+        "A": None if A is None else A.summary(),
+        "B": None if B is None else B.summary(),
     }
 
 
