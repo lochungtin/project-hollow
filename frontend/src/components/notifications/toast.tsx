@@ -72,13 +72,11 @@ const ToastContainer = () => {
 
     useEffect(() => {
         state.jobs.forEach((job) => {
-        if ((job.status === 'complete' || job.status === 'error') && !timers.current[job.id]) {
-                timers.current[job.id] = window.setTimeout(() => {
-                setDismissed((prev) => new Set(prev).add(job.id))
-            }, 5000)
-        }
+        if ((job.status === 'complete' || job.status === 'error') && !timers.current[job.id])
+            timers.current[job.id] = window.setTimeout(() => state.removeJob(job), 5000)
         })
     }, [state.jobs])
+
 
     const visible = state.jobs.filter((j) => !dismissed.has(j.id)).slice(0, 6)
     if (visible.length === 0)

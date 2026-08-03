@@ -58,15 +58,24 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 		socket.connect()
 		const unsub = socket.subscribe(msg => {
 			if (msg.type === 'list') {
+				console.log('Job list')
 				setJobs(msg.jobs)
-				console.log(msg.jobs)
 			}
-			else {
-
+			if (msg.type === 'update') {
+				console.log('Job update:', msg.job.name, msg.job.id, msg.job.status)
+				setJobs((prev) => {
+					const idx = prev.findIndex((j) => j.id === msg.job.id)
+					if (idx === -1)
+						return [msg.job, ...prev]
+					const copy = [...prev]
+					copy[idx] = msg.job
+					return copy
+				})
 			}
 		})
 		return () => {
 			socket.close()
+			unsub()
 		}
 	}, [])
 
@@ -162,8 +171,8 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 	// --- GUAVA OPERATIONS
 	const triggerBSD = useCallback(async () => {
 		try {
-			const res = await triggerBSDAPI()
-			setBSDRes(res)
+			const job = await triggerBSDAPI()
+			setJobs((prev) => [job, ...prev])
 		} catch (err) {
 			console.error(JSON.stringify(err))
 		}
@@ -172,8 +181,8 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 
 	const triggerDisp = useCallback(async () => {
 		try {
-			const res = await triggerDispAPI()
-			setDispRes(res)
+			const job = await triggerDispAPI()
+			setJobs((prev) => [job, ...prev])
 		} catch (err) {
 			console.error(JSON.stringify(err))
 		}
@@ -181,8 +190,8 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 
 	const triggerSepD = useCallback(async () => {
 		try {
-			const res = await triggerSepDAPI()
-			setSepDRes(res)
+			const job = await triggerSepDAPI()
+			setJobs((prev) => [job, ...prev])
 		} catch (err) {
 			console.error(JSON.stringify(err))
 		}
@@ -190,12 +199,25 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 
 	const triggerSepDN = useCallback(async () => {
 		try {
-			const res = await triggerSepDNAPI()
-			setSepDNRes(res)
+			const job = await triggerSepDNAPI()
+			setJobs((prev) => [job, ...prev])
 		} catch (err) {
 			console.error(JSON.stringify(err))
 		}
 	}, [])
+
+	const removeJob = (job: Job) => {
+		setJobs((prev) => {
+			console.log(prev)
+			const idx = prev.findIndex((j) => j.id === job.id)
+			if (idx === -1)
+				return [...prev]
+			const copy = [...prev]
+			copy.splice(idx, 1)
+			console.log(copy)
+			return copy
+		})
+	}
 
 
 	const value = useMemo(() => ({
@@ -206,7 +228,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 		updateLocalAnchorMM, updateLocalAnchorPX,
 		updateAnchor, localAnchorMM, localAnchorPX,
 		updateTarget,
-		jobs,
+		jobs, removeJob,
 		triggerBSD, bsdRes,
 		triggerDisp, dispRes,
 		triggerSepD, sepDRes,
@@ -219,7 +241,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 		updateLocalAnchorMM, updateLocalAnchorPX,
 		updateAnchor, localAnchorMM, localAnchorPX,
 		updateTarget,
-		jobs,
+		jobs, removeJob,
 		triggerBSD, bsdRes,
 		triggerDisp, dispRes,
 		triggerSepD, sepDRes,

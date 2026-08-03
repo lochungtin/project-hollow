@@ -70,5 +70,9 @@ def getSepD():
     return {}
 
 
+def getDiVH():
+    return {}
+
+
 def getSepDN():
     return {}

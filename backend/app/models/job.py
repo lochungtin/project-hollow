@@ -12,7 +12,7 @@ ERROR = "error"
 class Job:
     name: str
     status: str = PENDING
-    id: str = uuid.uuid4().hex[:12]
+    id: str = field(default_factory=lambda: uuid.uuid4().hex[:12])
     t_sta: float = field(default_factory=time)
     t_fin: float = -1
     result: dict = field(default_factory=dict)

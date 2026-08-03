@@ -23,6 +23,7 @@ export type AppState = {
     'updateTarget': (slot: string, target: string) => Promise<void>,
 
     'jobs': Job[],
+    'removeJob': (job: Job) => void,
 
     'bsdRes': { [key: string]: {"ASD": number, "HD95": number, "HD": number} },
     'triggerBSD': () => Promise<void>,
