@@ -1,8 +1,10 @@
+import { Listener, ResponseQueue } from "../types"
+
 class Socket {
   	private ws: WebSocket | null = null
   	private listeners: Listener[] = []
   	private reconnectTimer: number | null = null
-  	private closedByUser = false
+  	private closedByUser: boolean = false
 
   	connect(): void {
     	this.closedByUser = false
@@ -11,7 +13,7 @@ class Socket {
     	this.ws = new WebSocket(`${protocol}://${location.host}/ws`)
     	this.ws.onmessage = (ev) => {
       		try {
-        		const msg = JSON.parse(ev.data) as JobSocketMessage
+        		const msg = JSON.parse(ev.data) as ResponseQueue
         		this.listeners.forEach((l) => l(msg))
       		} catch {}
     	}
@@ -22,7 +24,7 @@ class Socket {
 		}
   	}
 
-  	subscribe(fn): () => void {
+  	subscribe(fn: Listener): () => void {
     	this.listeners.push(fn)
     	return () => {
       		this.listeners = this.listeners.filter((l) => l !== fn)

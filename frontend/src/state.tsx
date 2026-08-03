@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { deleteDatasetAPI, getDeviceAPI, rehydrateAPI, triggerBSDAPI, triggerDispAPI, triggerSepDAPI, triggerSepDNAPI, updateAnchorAPI, updateTargetAPI, updateVisibilityAPI, uploadDicomAPI, uploadRTStructAPI } from './api/client'
-import { AppState, Dataset } from './types'
+import { socket } from './api/websocket'
+import { AppState, Dataset, Job } from './types'
 
 
 const AppStateContext = createContext<AppState | null>(null)
@@ -20,6 +21,8 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 
 	const [localAnchorMM, setLocalAnchorMM] = useState({ "A": [0, 0, 0], "B": [0, 0, 0] })
 	const [localAnchorPX, setLocalAnchorPX] = useState({ "A": [0, 0, 0], "B": [0, 0, 0] })
+
+	const [jobs, setJobs] = useState<Job[]>([])
 
 	const [bsdRes, setBSDRes] = useState({})
 	const [dispRes, setDispRes] = useState({})
@@ -51,7 +54,18 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 	useEffect(() => {
 		getDeviceAPI().then(setDevice)
 		rehydrate()
-		return () => { }
+
+		socket.connect()
+		const unsub = socket.subscribe(msg => {
+			if (msg.type === 'list')
+				setJobs(msg.jobs)
+			else {
+				
+			}
+		})
+		return () => {
+			socket.close()
+		}
 	}, [])
 
 

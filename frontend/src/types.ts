@@ -81,3 +81,18 @@ export type Mesh = {
     'face_count': number
 }
 
+export type ResponseQueue = 
+    {'type': 'list', 'jobs': Job[]} | 
+    {'type': 'update', 'job': Job}
+
+export type Listener = (msg: ResponseQueue) => void
+
+export type Job = {
+    'id': string,
+    'name': string,
+    'status': 'pending' | 'running'| 'complete' | 'error',
+    't_sta': number,
+    't_fin': number,
+    'result': any,
+    'error': string,
+}

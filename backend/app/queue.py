@@ -21,7 +21,7 @@ class Queue:
     def getAll(self):
         return [
             j.summary()
-            for j in sorted(self._jobs.values(), key=lambda j: j.t_start, reverse=True)
+            for j in sorted(self.jobs.values(), key=lambda j: j.t_start, reverse=True)
         ]
 
     def launch(self, name, fn):

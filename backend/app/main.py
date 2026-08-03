@@ -2,6 +2,7 @@ from pathlib import Path
 
 from app.api.dataset import router as data_router
 from app.api.guava import router as guava_router
+from app.api.websocket import router as websocket_router
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -17,7 +18,7 @@ app.add_middleware(
 
 app.include_router(guava_router)
 app.include_router(data_router)
-# app.include_router(routes_ws.router)
+app.include_router(websocket_router)
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 _FRONTEND_DIST = _PROJECT_ROOT / "frontend" / "dist"

@@ -1,25 +1,27 @@
 import asyncio
 import os
 
-from fastapi import APIRouter, WebSocketDisconnect
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from ..storage import QUEUE
-
-router = APIRouter()
 
 ACTIVE_CONNECTIONS = 0
 EVER_CONNECTED = False
 SHUTDOWN = None
 
+router = APIRouter()
+
 
 @router.websocket("/ws")
-async def handshake(websocket):
+async def handshake(websocket: WebSocket):
     global ACTIVE_CONNECTIONS, EVER_CONNECTED, SHUTDOWN
-
+    print("hi")
     await websocket.accept()
     ACTIVE_CONNECTIONS += 1
+    print(f"Current active connections: {ACTIVE_CONNECTIONS}")
     EVER_CONNECTED = True
     if SHUTDOWN is not None:
+        print("Queue shutdown sequence.")
         SHUTDOWN.cancel()
         SHUTDOWN = None
 
@@ -31,11 +33,14 @@ async def handshake(websocket):
         await websocket.send_json({"type": "list", "jobs": QUEUE.getAll()})
         while True:
             await websocket.receive_text()
+
     except WebSocketDisconnect:
         pass
+
     finally:
         QUEUE.unsubscribe(send)
         ACTIVE_CONNECTIONS -= 1
+        print(f"Current active connections: {ACTIVE_CONNECTIONS}")
         if ACTIVE_CONNECTIONS == 0 and EVER_CONNECTED:
             SHUTDOWN = asyncio.create_task(shutdown())
 
