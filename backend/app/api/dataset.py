@@ -18,7 +18,7 @@ router = APIRouter(prefix="/api/dataset", tags=["datasets"])
 
 # --- REHYDRATION
 @router.get("/all")
-def rehydrate():
+def rehydrateDataset():
     A = getDataset("A")
     B = getDataset("B")
     return {

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 
 from ..guava import getBSD, getDisp, getDiVH, getSepD, getSepDN
-from ..storage import QUEUE, getDevice
+from ..storage import QUEUE, getDevice, getResults
 
 router = APIRouter(prefix="/api/guava", tags=["jobs"])
 
@@ -18,6 +18,11 @@ JOB_LIST = {
 @router.get("/device")
 def getDeviceInfo():
     return getDevice()
+
+
+@router.get("/results")
+def rehydrateResults():
+    return getResults()
 
 
 @router.get("/queue/{job}")

@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import { deleteDatasetAPI, getDeviceAPI, rehydrateAPI, triggerGuavaOpAPI, updateAnchorAPI, updateTargetAPI, updateVisibilityAPI, uploadDicomAPI, uploadRTStructAPI } from './api/client'
+import { deleteDatasetAPI, getDeviceAPI, rehydrateDatasetAPI, rehydrateResultsAPI, triggerGuavaOpAPI, updateAnchorAPI, updateTargetAPI, updateVisibilityAPI, uploadDicomAPI, uploadRTStructAPI } from './api/client'
 import { socket } from './api/websocket'
 import { AppState, Dataset, Job, ResultStore } from './types'
 
@@ -28,9 +28,12 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 
 	const rehydrate = useCallback(async () => {
 		try {
-			const res = await rehydrateAPI()
+			const datasets = await rehydrateDatasetAPI()
+			const results = await rehydrateResultsAPI()
 
-			Object.entries(res).forEach(([slot, ds]) => {
+			setResults(results)
+
+			Object.entries(datasets).forEach(([slot, ds]) => {
 				if (ds) {
 					const lAnchorMM = ds.anchor.map(x => Math.round(x / ds.scan.spacing[0]))
 					const lAnchorPX = ds.anchor
@@ -46,7 +49,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 			setLocalAnchorPX({ 'A': [0, 0, 0], 'B': [0, 0, 0] })
 		}
 	}, [])
-	
+
 
 	useEffect(() => {
 		getDeviceAPI().then(setDevice)

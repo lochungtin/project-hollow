@@ -1,8 +1,10 @@
-import { Dataset, HTTPPayload } from "../types"
+import { Dataset, HTTPPayload, ResultStore } from "../types"
 
 // --- EXPOSED APIS
 // rehydrate cached data
-export const rehydrateAPI = (): Promise<{"A": Dataset | null, "B": Dataset | null}> => _get('api/dataset/all')
+export const rehydrateDatasetAPI = (): Promise<{"A": Dataset | null, "B": Dataset | null}> => _get('api/dataset/all')
+
+export const rehydrateResultsAPI = (): Promise<ResultStore> => _get('api/guava/results')
 
 // get computation device
 export const getDeviceAPI = (): Promise<string> => _get('api/guava/device')
