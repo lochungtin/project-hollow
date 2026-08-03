@@ -36,16 +36,33 @@ const Progressbar = ({success}: {success: boolean}) => {
 
 
 const Toast = ({job}: {job: Job}) => {
+    const t_sta = (new Date(job.t_sta * 1000)).getTime()
     const pending = job.status === 'pending'
     const loading = job.status === 'running' || pending
+
+    const [time, setTime] = useState(0)
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            if (job.status === 'running')
+                setTime(Math.floor((Date.now() - t_sta) / 1000))
+        }, 1000)
+
+        return () => {clearInterval(interval)}
+    }, [job.status])
+
     
+    const second = (time % 60).toString().padStart(2, '0')
+    const minutes = (Math.floor(time / 60) % 60).toString().padStart(2, '0')
+    const hours = (Math.floor(time / 3600)).toString().padStart(2, '0')
+
     return (
         <div className='toast-root'>
             <div className='toast-content'>
                 <span className='toast-content-label'>Job Name: </span>
                 <span className='toast-content-value'>{job.name}</span>
                 <span className='toast-content-label'>Time Elapsed: </span>
-                <span className='toast-content-value'>00:00:00</span>
+                <span className='toast-content-value'>{hours}:{minutes}:{second}</span>
             </div>
             <div className='toast-progress'>
                 {loading ?

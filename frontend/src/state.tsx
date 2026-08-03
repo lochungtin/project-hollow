@@ -63,6 +63,19 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 			}
 			if (msg.type === 'update') {
 				console.log('Job update:', msg.job.name, msg.job.id, msg.job.status)
+
+				const t_sta = (new Date(msg.job.t_sta)).getTime()
+				const t_fin = (new Date(msg.job.t_fin)).getTime()
+				if (t_fin > t_sta) {
+					const diff = t_fin - t_sta
+					const second = (diff % 60).toString().padStart(2, '0')
+					const minutes = (Math.floor(diff / 60) % 60).toString().padStart(2, '0')
+					const hours = (Math.floor(diff / 3600)).toString().padStart(2, '0')
+					console.log(hours, minutes, second)
+				}
+				else
+					console.log('running')
+
 				setJobs((prev) => {
 					const idx = prev.findIndex((j) => j.id === msg.job.id)
 					if (idx === -1)

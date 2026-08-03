@@ -56,8 +56,8 @@ class Queue:
             print(f"Job {job.name} {job.id}: failed")
 
         finally:
-            await self.broadcast(job)
             job.t_fin = time()
+            await self.broadcast(job)
 
     async def broadcast(self, job):
         for i, subscriber in enumerate(self.subscribers):
