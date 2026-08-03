@@ -26,8 +26,8 @@ class Queue:
             if j.status == "pending" or j.status == "running"
         ]
 
-    def launch(self, name, fn):
-        job = Job(name=name)
+    def launch(self, name, op, fn):
+        job = Job(name=name, type=op)
         self.jobs[job.id] = job
         print(f"Created Job: {name} {job.id}")
         asyncio.create_task(self.run(job, fn))

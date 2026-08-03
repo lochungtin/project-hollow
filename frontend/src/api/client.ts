@@ -42,13 +42,7 @@ export const updateTargetAPI = (slot: string, target: string): Promise<Dataset> 
 }
 
 // guava operation triggers
-export const triggerBSDAPI = () => _get('api/guava/queue/bsd')
-
-export const triggerDispAPI = () => _get('api/guava/queue/disp')
-
-export const triggerSepDAPI = () => _get('api/guava/queue/sepd')
-
-export const triggerSepDNAPI = () => _get('api/guava/queue/sepdn')
+export const triggerGuavaOpAPI = (op: string) => _get(`api/guava/queue/${op}`)
 
 
 // --- BASE METHODS

@@ -186,7 +186,7 @@ const DataPane = () => {
     const targetsSet = ((_A && _A?.targetID !== "unknown") && (_B && _B?.targetID !== "unknown")) ?? false
     const displayStatus = +emptyA + +emptyB + +targetsSet
 
-    const bsdData = Object.values(state.bsdRes).map(r => Object.values(r).map(v => v / (scaleBSD ? aSAScale : 1)))
+    const bsdData = Object.values(state.results.bsd).map(r => Object.values(r).map(v => v / (scaleBSD ? aSAScale : 1)))
 
     return (
         <aside className='data-pane-root'>
@@ -205,9 +205,9 @@ const DataPane = () => {
                     </Fallback>
                 </Card>
                 <Card badge='BSD' title='Bidirectional Surface Discrepancy'>
-                    <Fallback ready={Object.keys(state.bsdRes).length > 0} fallbackCode={displayStatus} fallbackMax={2} fn={state.triggerBSD}>
+                    <Fallback ready={Object.keys(state.results.bsd).length > 0} fallbackCode={displayStatus} fallbackMax={2} fn={() => state.trigger('bsd')}>
                         <Table
-                            rowNames={Object.keys(state.bsdRes)}
+                            rowNames={Object.keys(state.results.bsd)}
                             colNames={["ASD", "HD95", "HD"]}
                             data={bsdData}
                             scale={scaleBSD}
@@ -216,14 +216,8 @@ const DataPane = () => {
                     </Fallback>
                 </Card>
                 <Card badge='DISP' title='ROI Relative Displacement'>
-                    <Fallback ready={false} fallbackCode={displayStatus} fallbackMax={2} fn={state.triggerBSD}>
-                        <Table
-                            rowNames={Object.keys(state.bsdRes)}
-                            colNames={["ASD", "HD95", "HD"]}
-                            data={bsdData}
-                            scale={scaleBSD}
-                            setScale={setScaleBSD}
-                        />
+                    <Fallback ready={false} fallbackCode={displayStatus} fallbackMax={2}>
+                        
                     </Fallback>
                 </Card>
                 <Card badge='SD' title='Separation Distance'>

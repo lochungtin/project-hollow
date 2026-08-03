@@ -25,17 +25,8 @@ export type AppState = {
     'jobs': Job[],
     'removeJob': (job: Job) => void,
 
-    'bsdRes': { [key: string]: {"ASD": number, "HD95": number, "HD": number} },
-    'triggerBSD': () => Promise<void>,
-
-    'dispRes': {}
-    'triggerDisp': () => Promise<void>,
-
-    'sepDRes': {},
-    'triggerSepD': () => Promise<void>,
-
-    'sepDNRes': {},
-    'triggerSepDN': () => Promise<void>,
+    'results': ResultStore,
+    'trigger': (op: string) => Promise<void>
 }
 
 
@@ -82,6 +73,7 @@ export type Mesh = {
     'face_count': number
 }
 
+
 export type ResponseQueue = 
     {'type': 'list', 'jobs': Job[]} | 
     {'type': 'update', 'job': Job}
@@ -91,9 +83,39 @@ export type Listener = (msg: ResponseQueue) => void
 export type Job = {
     'id': string,
     'name': string,
+    'type': 'bsd' | 'disp' | 'sepd' | 'divh' | 'sepdn',
     'status': string,
     't_sta': number,
     't_fin': number,
     'result': any,
     'error': string,
+}
+
+
+export type ResultStore = {
+    'bsd': ResponseBSD | {},
+    'disp': ResponseDisp | {},
+    'sepd': ResponseSepD | {},
+    'divh': ResponseDiVH | {},
+    'sepdn': ResponseSepDN | {},
+}
+
+export type ResponseBSD = { 
+    [key: string]: { 'ASD': number, 'HD95': number, 'HD': number } 
+}
+
+export type ResponseDisp = {
+
+}
+
+export type ResponseSepD = {
+
+}
+
+export type ResponseDiVH = [
+
+]
+
+export type ResponseSepDN = {
+
 }

@@ -27,30 +27,5 @@ async def triggerOperation(job: str):
     except:
         raise HTTPException(404, f"Unknown operation '{job}'")
 
-    job = QUEUE.launch(name, fn)
+    job = QUEUE.launch(name, job, fn)
     return job.summary()
-
-
-@router.get("/bsd")
-def triggerBSD():
-    return getBSD()
-
-
-@router.get("/disp")
-def triggerDisp():
-    return getDisp()
-
-
-@router.get("/sepd")
-def triggerSepD():
-    return getSepD()
-
-
-@router.get("/divh")
-def triggerDiVHD():
-    return getDiVH()
-
-
-@router.get("/sepdn")
-def triggerSepDN():
-    return getSepDN()

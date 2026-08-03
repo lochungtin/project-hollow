@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import { deleteDatasetAPI, getDeviceAPI, rehydrateAPI, triggerBSDAPI, triggerDispAPI, triggerSepDAPI, triggerSepDNAPI, updateAnchorAPI, updateTargetAPI, updateVisibilityAPI, uploadDicomAPI, uploadRTStructAPI } from './api/client'
+import { deleteDatasetAPI, getDeviceAPI, rehydrateAPI, triggerGuavaOpAPI, updateAnchorAPI, updateTargetAPI, updateVisibilityAPI, uploadDicomAPI, uploadRTStructAPI } from './api/client'
 import { socket } from './api/websocket'
-import { AppState, Dataset, Job } from './types'
+import { AppState, Dataset, Job, ResultStore } from './types'
 
 
 const AppStateContext = createContext<AppState | null>(null)
@@ -14,21 +14,17 @@ export const useAppState = () => {
 }
 
 export const AppStateProvider = ({ children }: { children: React.ReactNode }) => {
-	const [device, setDevice] = useState("Loading...")
+	const [device, setDevice] = useState('Loading...')
 
-	const [dataset, setDataset] = useState({ "A": null, "B": null })
-	const [uploading, setUploading] = useState({ "A": false, "B": false })
+	const [dataset, setDataset] = useState({ 'A': null, 'B': null })
+	const [uploading, setUploading] = useState({ 'A': false, 'B': false })
 
-	const [localAnchorMM, setLocalAnchorMM] = useState({ "A": [0, 0, 0], "B": [0, 0, 0] })
-	const [localAnchorPX, setLocalAnchorPX] = useState({ "A": [0, 0, 0], "B": [0, 0, 0] })
+	const [localAnchorMM, setLocalAnchorMM] = useState({ 'A': [0, 0, 0], 'B': [0, 0, 0] })
+	const [localAnchorPX, setLocalAnchorPX] = useState({ 'A': [0, 0, 0], 'B': [0, 0, 0] })
 
 	const [jobs, setJobs] = useState<Job[]>([])
+	const [results, setResults] = useState<ResultStore>({'bsd': {}, 'disp': {}, 'sepd': {}, 'divh': {}, 'sepdn': {}})
 
-	const [bsdRes, setBSDRes] = useState({})
-	const [dispRes, setDispRes] = useState({})
-	const [sepDRes, setSepDRes] = useState({})
-	const [dvhRes, setDvhRes] = useState({})
-	const [sepDNRes, setSepDNRes] = useState({})
 
 	const rehydrate = useCallback(async () => {
 		try {
@@ -45,11 +41,12 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 				}
 			})
 		} catch {
-			setDataset({ "A": null, "B": null })
-			setLocalAnchorMM({ "A": [0, 0, 0], "B": [0, 0, 0] })
-			setLocalAnchorPX({ "A": [0, 0, 0], "B": [0, 0, 0] })
+			setDataset({ 'A': null, 'B': null })
+			setLocalAnchorMM({ 'A': [0, 0, 0], 'B': [0, 0, 0] })
+			setLocalAnchorPX({ 'A': [0, 0, 0], 'B': [0, 0, 0] })
 		}
 	}, [])
+	
 
 	useEffect(() => {
 		getDeviceAPI().then(setDevice)
@@ -57,25 +54,10 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 
 		socket.connect()
 		const unsub = socket.subscribe(msg => {
-			if (msg.type === 'list') {
-				console.log('Job list')
+			if (msg.type === 'list')
 				setJobs(msg.jobs)
-			}
 			if (msg.type === 'update') {
-				console.log('Job update:', msg.job.name, msg.job.id, msg.job.status)
-
-				const t_sta = (new Date(msg.job.t_sta)).getTime()
-				const t_fin = (new Date(msg.job.t_fin)).getTime()
-				if (t_fin > t_sta) {
-					const diff = t_fin - t_sta
-					const second = (diff % 60).toString().padStart(2, '0')
-					const minutes = (Math.floor(diff / 60) % 60).toString().padStart(2, '0')
-					const hours = (Math.floor(diff / 3600)).toString().padStart(2, '0')
-					console.log(hours, minutes, second)
-				}
-				else
-					console.log('running')
-
+				console.log(`Job update: ${msg.job.name} [${msg.job.status}]`)
 				setJobs((prev) => {
 					const idx = prev.findIndex((j) => j.id === msg.job.id)
 					if (idx === -1)
@@ -84,6 +66,9 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 					copy[idx] = msg.job
 					return copy
 				})
+
+				if (msg.job.status === 'complete')
+					setResults((prev) => ({...prev, [msg.job.type]: msg.job.result}))
 			}
 		})
 		return () => {
@@ -155,7 +140,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 		setLocalAnchorPX((prev) => ({ ...prev, [slot]: ints }))
 	}
 
-	const updateAnchor = useCallback(async (slot: string, anchor: number[], id: string = "unknown") => {
+	const updateAnchor = useCallback(async (slot: string, anchor: number[], id: string = 'unknown') => {
 		try {
 			const ds = await updateAnchorAPI(slot, anchor, id)
 
@@ -182,37 +167,9 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 	}, [])
 
 	// --- GUAVA OPERATIONS
-	const triggerBSD = useCallback(async () => {
+	const trigger = useCallback(async (op: string) => {
 		try {
-			const job = await triggerBSDAPI()
-			setJobs((prev) => [job, ...prev])
-		} catch (err) {
-			console.error(JSON.stringify(err))
-		}
-	}, [])
-
-
-	const triggerDisp = useCallback(async () => {
-		try {
-			const job = await triggerDispAPI()
-			setJobs((prev) => [job, ...prev])
-		} catch (err) {
-			console.error(JSON.stringify(err))
-		}
-	}, [])
-
-	const triggerSepD = useCallback(async () => {
-		try {
-			const job = await triggerSepDAPI()
-			setJobs((prev) => [job, ...prev])
-		} catch (err) {
-			console.error(JSON.stringify(err))
-		}
-	}, [])
-
-	const triggerSepDN = useCallback(async () => {
-		try {
-			const job = await triggerSepDNAPI()
+			const job = await triggerGuavaOpAPI(op)
 			setJobs((prev) => [job, ...prev])
 		} catch (err) {
 			console.error(JSON.stringify(err))
@@ -221,13 +178,11 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 
 	const removeJob = (job: Job) => {
 		setJobs((prev) => {
-			console.log(prev)
 			const idx = prev.findIndex((j) => j.id === job.id)
 			if (idx === -1)
 				return [...prev]
 			const copy = [...prev]
 			copy.splice(idx, 1)
-			console.log(copy)
 			return copy
 		})
 	}
@@ -242,10 +197,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 		updateAnchor, localAnchorMM, localAnchorPX,
 		updateTarget,
 		jobs, removeJob,
-		triggerBSD, bsdRes,
-		triggerDisp, dispRes,
-		triggerSepD, sepDRes,
-		triggerSepDN, sepDNRes,
+		trigger, results
 	}), [
 		device,
 		uploading, dataset,
@@ -255,10 +207,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 		updateAnchor, localAnchorMM, localAnchorPX,
 		updateTarget,
 		jobs, removeJob,
-		triggerBSD, bsdRes,
-		triggerDisp, dispRes,
-		triggerSepD, sepDRes,
-		triggerSepDN, sepDNRes,
+		trigger, results
 	])
 
 	return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>

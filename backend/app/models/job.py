@@ -11,6 +11,7 @@ ERROR = "error"
 @dataclass
 class Job:
     name: str
+    type: str
     status: str = PENDING
     id: str = field(default_factory=lambda: uuid.uuid4().hex[:12])
     t_sta: float = field(default_factory=time)
@@ -22,6 +23,7 @@ class Job:
         return {
             "id": self.id,
             "name": self.name,
+            "type": self.type,
             "status": self.status,
             "t_sta": self.t_sta,
             "t_fin": self.t_fin,
