@@ -15,13 +15,13 @@ router = APIRouter()
 @router.websocket("/ws")
 async def handshake(websocket: WebSocket):
     global ACTIVE_CONNECTIONS, EVER_CONNECTED, SHUTDOWN
-    print("hi")
+
     await websocket.accept()
     ACTIVE_CONNECTIONS += 1
-    print(f"Current active connections: {ACTIVE_CONNECTIONS}")
+    print(f"[CONNECT]\tCurrent active connections: {ACTIVE_CONNECTIONS}")
     EVER_CONNECTED = True
     if SHUTDOWN is not None:
-        print("Queue shutdown sequence.")
+        print("[CANCEL]\tCancelled shutdown sequence.")
         SHUTDOWN.cancel()
         SHUTDOWN = None
 
@@ -40,13 +40,14 @@ async def handshake(websocket: WebSocket):
     finally:
         QUEUE.unsubscribe(send)
         ACTIVE_CONNECTIONS -= 1
-        print(f"Current active connections: {ACTIVE_CONNECTIONS}")
+        print(f"[CONNECT]\tCurrent active connections: {ACTIVE_CONNECTIONS}")
         if ACTIVE_CONNECTIONS == 0 and EVER_CONNECTED:
+            print("[SHUTDOWN]\tQueued shutdown sequence.")
             SHUTDOWN = asyncio.create_task(shutdown())
 
 
 async def shutdown() -> None:
     await asyncio.sleep(5)
     if ACTIVE_CONNECTIONS == 0:
-        print("No active connections - shutting down.")
+        print("[SHUTDOWN]\tNo active connections - shutting down.")
         os._exit(0)

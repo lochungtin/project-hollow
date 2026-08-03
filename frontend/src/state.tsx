@@ -57,10 +57,12 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 
 		socket.connect()
 		const unsub = socket.subscribe(msg => {
-			if (msg.type === 'list')
+			if (msg.type === 'list') {
 				setJobs(msg.jobs)
+				console.log(msg.jobs)
+			}
 			else {
-				
+
 			}
 		})
 		return () => {
@@ -204,6 +206,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 		updateLocalAnchorMM, updateLocalAnchorPX,
 		updateAnchor, localAnchorMM, localAnchorPX,
 		updateTarget,
+		jobs,
 		triggerBSD, bsdRes,
 		triggerDisp, dispRes,
 		triggerSepD, sepDRes,
@@ -216,6 +219,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 		updateLocalAnchorMM, updateLocalAnchorPX,
 		updateAnchor, localAnchorMM, localAnchorPX,
 		updateTarget,
+		jobs,
 		triggerBSD, bsdRes,
 		triggerDisp, dispRes,
 		triggerSepD, sepDRes,

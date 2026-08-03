@@ -13,12 +13,20 @@
     --text-dim: #808080;
     --text-faint: #555;
 
-    --accent: #f2a340;
-    --accent-dim: #936b3a;
-    --accent-faint: #544129;
+    /* --accent: #f2a340; */
+    /* --accent-dim: #936b3a; */
+    /* --accent-faint: #544129; */
+
+    /* --accent: #3cef8e; */
+    /* --accent-dim: #399b65; */
+    /* --accent-faint: #2f4d3c; */
+
+    --accent: #9f79df;
+    --accent-dim: #684e96;
+    --accent-faint: #3e2a61;
 
     --danger: #e5595f;
-    --success: #3ecf8e;
+    --success: #3cef8e;
 
     --radius: 3px;
 

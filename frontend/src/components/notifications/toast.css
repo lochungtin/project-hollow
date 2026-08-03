@@ -1,0 +1,96 @@
+.toast-container {
+    display: flex;
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    flex-direction: column-reverse;
+    gap: 10px;
+    z-index: 10;
+    margin: 20px;
+}
+
+.toast-root {
+    display: flex;
+    position: relative;
+    flex-direction: row;
+    align-items: center;
+    filter: drop-shadow(0px 0px 10px #ffffff10);
+    border: 1px solid var(--accent-dim);
+    border-left: 10px solid var(--accent-dim);
+    border-radius: var(--radius);
+    background-color: var(--panel);
+    width: 250px;
+    height: 60px;
+}
+
+.toast-root:hover {
+    border-color: var(--accent);
+}
+
+.toast-content {
+    display: grid;
+    grid-template-columns: 1.5fr 2fr;
+    padding-left: 10px;
+    grid-gap: 5px 10px;
+    font-size: 10.5px;
+}
+
+.toast-content-label {
+    color: var(--text-dim);
+}
+
+.toast-content-value {
+    font-family: var(--mono);
+}
+
+.toast-progress {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-right: 20px;
+    /* background-color: red; */
+    width: 30px;
+    height: 30px;
+}
+
+.toast-progress-inner {
+    position: absolute;
+    opacity: 1;
+    filter: invert();
+    animation: fade 1s linear;
+    width: 20px;
+    height: 20px;
+}
+
+.toast-progress-smaller {
+    width: 15px;
+    height: 15px;
+}
+
+@keyframes fade {
+    0% {
+        opacity: 0
+    }
+
+    100% {
+        opacity: 1
+    }
+}
+
+.toast-close {
+    position: absolute;
+    top: 2px;
+    right: 0;
+    opacity: 0.5;
+    border: none;
+    background: none;
+}
+
+.toast-close:hover {
+    opacity: 1;
+}
+
+.toast-close-img {
+    width: 10px;
+    height: 10px;
+}

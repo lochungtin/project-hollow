@@ -1,6 +1,4 @@
-export type HTTPPayload = {
-    [key: string]: any
-}
+export type HTTPPayload = { [key: string]: any }
 
 
 export type AppState = {
@@ -23,6 +21,8 @@ export type AppState = {
     'updateLocalAnchorPX': (slot: string, anchor: number[]) => void,
 
     'updateTarget': (slot: string, target: string) => Promise<void>,
+
+    'jobs': Job[],
 
     'bsdRes': { [key: string]: {"ASD": number, "HD95": number, "HD": number} },
     'triggerBSD': () => Promise<void>,
@@ -90,7 +90,7 @@ export type Listener = (msg: ResponseQueue) => void
 export type Job = {
     'id': string,
     'name': string,
-    'status': 'pending' | 'running'| 'complete' | 'error',
+    'status': string,
     't_sta': number,
     't_fin': number,
     'result': any,

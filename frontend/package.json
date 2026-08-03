@@ -13,7 +13,9 @@
     "@emotion/styled": "^11.14.1",
     "@mui/material": "^9.2.0",
     "react": "^18.3.1",
+    "react-circular-progressbar": "^2.2.0",
     "react-dom": "^18.3.1",
+    "react-spinners": "^0.17.0",
     "three": "^0.160.1"
   },
   "devDependencies": {

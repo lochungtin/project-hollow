@@ -161,7 +161,7 @@
 }
 
 .data-table-switch-active {
-    color: var(--accent-dim)
+    color: var(--accent)
 }
 
 .data-table-row-label {

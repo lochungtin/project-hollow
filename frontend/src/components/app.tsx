@@ -1,7 +1,7 @@
 // import { useAppState } from '../state'
 
 import Alert from './notifications/alert'
-import Toast from './notifications/toast'
+import ToastContainer from './notifications/toast'
 
 import DataPane from './panels/data'
 import InfoPane from './panels/info'
@@ -19,7 +19,7 @@ const App = () => {
 				<ViewPane />
 				<DataPane />
 			</div>
-			<Toast />
+			<ToastContainer />
 			<Alert />
 		</div>
 	)
