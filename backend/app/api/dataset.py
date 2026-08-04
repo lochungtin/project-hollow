@@ -48,7 +48,7 @@ async def upload_dicom(slot: str, file: UploadFile):
     dataset = getDataset(slot)
     gvStore = getGuavaStore()
     try:
-        contours = toContourObjs(content, dataset.scan)
+        contours = toContourObjs(slot, content, dataset.scan)
         dataset.contours = contours
 
         for c in contours.values():

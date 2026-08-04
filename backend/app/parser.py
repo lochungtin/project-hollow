@@ -1,3 +1,4 @@
+from colorsys import hls_to_rgb
 from io import BytesIO
 
 import guava_rt as gv
@@ -10,21 +11,6 @@ from .models.contour import Contour
 from .models.mesh import Mesh
 from .models.scan import Scan
 from .storage import getDevice
-
-_PALETTE = [
-    (230, 25, 75),
-    (60, 180, 75),
-    (255, 225, 25),
-    (0, 130, 200),
-    (245, 130, 48),
-    (145, 30, 180),
-    (70, 240, 240),
-    (240, 50, 230),
-    (210, 245, 60),
-    (250, 190, 212),
-    (0, 128, 128),
-    (220, 190, 255),
-]
 
 
 # --- Dicom Series
@@ -114,7 +100,7 @@ def toScanObj(filesBytes):
 
 
 # --- RTStruct
-def toContourObjs(fileBytes, scan):
+def toContourObjs(slot, fileBytes, scan):
     structSet = dcm.dcmread(BytesIO(fileBytes), force=True)
 
     roi_names = {}
@@ -129,7 +115,11 @@ def toContourObjs(fileBytes, scan):
     for i, roi_item in enumerate(getattr(structSet, "ROIContourSequence", [])):
         number = int(roi_item.ReferencedROINumber)
         name = roi_names.get(number, f"contour_{number}")
-        color = _PALETTE[i % len(_PALETTE)]
+
+        h = np.random.random() * 0.5 + (0.5 * int(slot == "A"))
+        l = np.random.random() * 0.5 + 0.25
+        s = np.random.random() * 0.75 + 0.125
+        color = [int(v * 255) for v in hls_to_rgb(h, l, s)]
 
         mask = np.zeros((depth, height, width), dtype=bool)
         contour_seq = getattr(roi_item, "ContourSequence", [])
