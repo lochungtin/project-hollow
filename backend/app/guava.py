@@ -32,13 +32,8 @@ def buildRegions():
     return gvStore["regions"]["A"], gvStore["regions"]["B"]
 
 
-def getBSD():
-    gvStore = getGuavaStore()
-    rA, rB = gvStore["regions"]["A"], gvStore["regions"]["B"]
-    if rA is None or rB is None:
-        rA, rB = buildRegions()
-
-    metrics = gv.Metrics(
+def buildMetrics(rA, rB):
+    return gv.Metrics(
         rA,
         rB,
         target_A=rA.target,
@@ -46,6 +41,15 @@ def getBSD():
         anchor_A=rA.anchor,
         anchor_B=rB.anchor,
     )
+
+
+def getBSD():
+    gvStore = getGuavaStore()
+    rA, rB = gvStore["regions"]["A"], gvStore["regions"]["B"]
+    if rA is None or rB is None:
+        rA, rB = buildRegions()
+
+    metrics = buildMetrics(rA, rB)
 
     asd = metrics.getBSDDiff("ASD")
     hd95 = metrics.getBSDDiff("HD95")
@@ -63,16 +67,51 @@ def getBSD():
 
 
 def getDisp():
-    return {}
+    metrics = buildMetrics(*buildRegions())
+    rt = {}
+    for name, val in metrics.getROIDisplacementDiff().items():
+        rt[name] = val.cpu().numpy().tolist()
+
+    return rt
 
 
 def getSepD():
-    return {}
+    metrics = buildMetrics(*buildRegions())
+    rt = {}
+    for name, rows in metrics.getSeparationDistanceDiff("volume").items():
+        _rt = []
+        for val in rows:
+            row = val.cpu().numpy()
+            _rt.append([v for i, v in enumerate(row) if i in (0, 1, 3, 6, 7)])
+
+        first = _rt.pop(0)
+        _rt.append(first)
+
+        _rt = np.asarray(_rt).T
+        rt[name] = _rt.tolist()
+
+    return rt
 
 
 def getDiVH():
+    metrics = buildMetrics(*buildRegions())
+
     return {}
 
 
 def getSepDN():
-    return {}
+    metrics = buildMetrics(*buildRegions())
+    rt = {}
+    for name, rows in metrics.getSeparationDistanceDiff("rcvs").items():
+        _rt = []
+        for val in rows:
+            row = val.cpu().numpy()
+            _rt.append([v for i, v in enumerate(row) if i in (0, 1, 3, 6, 7)])
+
+        first = _rt.pop(0)
+        _rt.append(first)
+
+        _rt = np.asarray(_rt).T
+        rt[name] = _rt.tolist()
+
+    return rt

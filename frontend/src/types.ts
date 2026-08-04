@@ -105,11 +105,11 @@ export type ResponseBSD = {
 }
 
 export type ResponseDisp = {
-
+    [key: string]: number[]
 }
 
 export type ResponseSepD = {
-
+    [key: string]: number[][]
 }
 
 export type ResponseDiVH = [
@@ -117,5 +117,5 @@ export type ResponseDiVH = [
 ]
 
 export type ResponseSepDN = {
-
+    [key: string]: number[][]
 }

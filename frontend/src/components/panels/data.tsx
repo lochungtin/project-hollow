@@ -3,7 +3,7 @@ import ChevDown from '../../icons/chev-down.svg'
 import ChevLeft from '../../icons/chev-left.svg'
 import ChevRight from '../../icons/chev-right.svg'
 import { useAppState } from '../../state'
-import { Contour } from '../../types'
+import { Contour, ResponseSepD, ResponseSepDN } from '../../types'
 import Switch from '../ui/Switch'
 import './data.css'
 
@@ -67,7 +67,7 @@ const Card = ({ badge, title, children }: { badge: string, title: string, childr
                     <img className='data-card-chev-img' src={showing ? ChevDown : ChevLeft} alt="toggle" />
                 </button>
             </header>
-            {showing && children}
+            {showing && <div className='data-card-content'>{children}</div>}
         </section>
     )
 }
@@ -77,7 +77,7 @@ const Fallback = ({ fallbackCode, fallbackMax, ready, fn, children }: {
     fallbackMax: number,
     ready: boolean,
     fn?: () => void,
-    children?: React.ReactElement
+    children?: React.ReactElement | React.ReactElement[]
 }) => {
     const onClick = (e: React.MouseEvent) => {
         if (fn)
@@ -94,6 +94,19 @@ const Fallback = ({ fallbackCode, fallbackMax, ready, fn, children }: {
             }
         </div>
     </div>)
+}
+
+const ColumnSelector = ({selection, selected, fn}: {selection: string[], selected: string, fn: (s: string) => void}) => {
+    return (
+        <aside className='data-card-selector-container'>
+            {selection.map(s => {
+                const cls = `data-card-selector-item ${selected === s? 'data-card-selector-item-selected': ''}`
+                return <button key={s} className={cls} onClick={(e) => fn(s)}>
+                    {s}
+                </button>
+            })}
+        </aside>
+    )
 }
 
 const Table = (
@@ -163,6 +176,12 @@ const DataPane = () => {
     const [scaleVol, setScaleVol] = useState(true)
     const [scaleSA, setScaleSA] = useState(true)
     const [scaleBSD, setScaleBSD] = useState(true)
+    const [scaleDisp, setScaleDisp] = useState(true)
+    const [scaleSepD, setScaleSepD] = useState(true)
+    const [scaleSepDN, setScaleSepDN] = useState(true)
+
+    const [selectedSepD, setSelectedSepD] = useState('')
+    const [selectedSepDN, setSelectedSepDN] = useState('')
 
     const state = useAppState()
 
@@ -179,14 +198,22 @@ const DataPane = () => {
     const bVolScale = Math.pow(_B?.scan.spacing[0] ?? 1, 3)
     const aSAScale = Math.pow(_A?.scan.spacing[0] ?? 1, 2)
     const bSAScale = Math.pow(_B?.scan.spacing[0] ?? 1, 2)
-
-    const volData = parseContoursNumDiff(A, B, 'volume', aVolScale, bVolScale, scaleVol)
-    const saData = parseContoursNumDiff(A, B, 'surface_area', aSAScale, bSAScale, scaleSA)
+    const unitScale = _A?.scan.spacing[0] ?? 1
 
     const targetsSet = ((_A && _A?.targetID !== "unknown") && (_B && _B?.targetID !== "unknown")) ?? false
     const displayStatus = +emptyA + +emptyB + +targetsSet
 
+    const volData = parseContoursNumDiff(A, B, 'volume', aVolScale, bVolScale, scaleVol)
+    const saData = parseContoursNumDiff(A, B, 'surface_area', aSAScale, bSAScale, scaleSA)
+
     const bsdData = Object.values(state.results.bsd).map(r => Object.values(r).map(v => v / (scaleBSD ? aSAScale : 1)))
+    const dispData = Object.values(state.results.disp).map(r => r.map(v => v / (scaleDisp ? unitScale : 1)))
+
+    const sepd = (state.results?.sepd as ResponseSepD)[selectedSepD] ?? []
+    const sepdn = (state.results?.sepdn as ResponseSepDN)[selectedSepDN] ?? []
+
+    const sepDData = sepd.map(r => r.map(v => v / (scaleSepD? unitScale : 1)))
+    const sepDNData = sepdn.map(r => r.map(v => v / (scaleSepDN ? unitScale : 1)))
 
     return (
         <aside className='data-pane-root'>
@@ -216,23 +243,65 @@ const DataPane = () => {
                     </Fallback>
                 </Card>
                 <Card badge='DISP' title='ROI Relative Displacement'>
-                    <Fallback ready={false} fallbackCode={displayStatus} fallbackMax={2}>
-                        
+                    <Fallback ready={Object.keys(state.results.disp).length > 0} fallbackCode={displayStatus} fallbackMax={2} fn={() => state.trigger('disp')}>
+                        <Table
+                            rowNames={Object.keys(state.results.disp)}
+                            colNames={["AXIS 1", "AXIS 2", "AXIS 3"]}
+                            data={dispData}
+                            scale={scaleDisp}
+                            setScale={setScaleDisp}
+                        />
                     </Fallback>
                 </Card>
                 <Card badge='SD' title='Separation Distance'>
-                    <Fallback ready={false} fallbackCode={displayStatus} fallbackMax={3}>
-
+                    <Fallback ready={Object.keys(state.results.sepd).length > 0} fallbackCode={displayStatus} fallbackMax={3} fn={() => state.trigger('sepd')}>
+                        <ColumnSelector
+                            selection={Object.keys(state.results.sepd)}
+                            selected={selectedSepD}
+                            fn={setSelectedSepD}
+                        />
+                        {selectedSepD ?
+                            <Table
+                                rowNames={["MIN", "5th", "AVG", "95th", "MAX"]}
+                                colNames={["Dataset A", "Dataset B", "Abs Diff"]}
+                                data={sepDData}
+                                scale={scaleSepD}
+                                setScale={setScaleSepD}
+                            /> : 
+                            <div className='data-card-fallback'>
+                                <div className='data-card-fallback-blur'>
+                                    Select a contour to display results.
+                                </div>
+                            </div>
+                        }
                     </Fallback>
                 </Card>
                 <Card badge='DiVH' title='Distance Volume Histogram'>
-                    <Fallback ready={false} fallbackCode={displayStatus} fallbackMax={3}>
+                    <Fallback ready={false} fallbackCode={displayStatus} fallbackMax={3} fn={() => state.trigger('divh')}>
 
                     </Fallback>
                 </Card>
                 <Card badge='SD-N' title='Separation Distance - Nearside Surface'>
-                    <Fallback ready={false} fallbackCode={displayStatus} fallbackMax={3}>
-
+                    <Fallback ready={Object.keys(state.results.sepdn).length > 0} fallbackCode={displayStatus} fallbackMax={3} fn={() => state.trigger('sepdn')}>
+                        <ColumnSelector
+                            selection={Object.keys(state.results.sepdn)}
+                            selected={selectedSepDN}
+                            fn={setSelectedSepDN}
+                        />
+                        {selectedSepDN ?
+                            <Table
+                                rowNames={["MIN", "5th", "AVG", "95th", "MAX"]}
+                                colNames={["Dataset A", "Dataset B", "Abs Diff"]}
+                                data={sepDNData}
+                                scale={scaleSepDN}
+                                setScale={setScaleSepDN}
+                            /> : 
+                            <div className='data-card-fallback'>
+                                <div className='data-card-fallback-blur'>
+                                    Select a contour to display results.
+                                </div>
+                            </div>
+                        }
                     </Fallback>
                 </Card>
             </main>
@@ -241,4 +310,5 @@ const DataPane = () => {
 }
 
 export default DataPane
+
 
