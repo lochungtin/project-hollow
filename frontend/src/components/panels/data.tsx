@@ -193,14 +193,9 @@ const Figure = ({A, B}: {A: number[], B: number[]}) => {
                     position: { vertical: 'bottom' },
                 },
             }}
+            axisHighlight={{ x: 'none', y: 'none' }}
             height={200}
             width={375}
-            sx={{
-                '& .MuiChartsAxis-line': { stroke: '#555' },
-                '& .MuiChartsAxis-tick': { stroke: '#555' },
-                '& .MuiChartsAxis-tickLabel': { fill: '#efefef' },
-                '& .MuiChartsAxis-label': { fill: '#efefef ' },
-            }}
             margin={{
                 top: 20,
                 right: 20,
@@ -261,9 +256,6 @@ const DataPane = () => {
 
     const sepDData = sepd.map(r => r.map(v => v / (scaleSepD? unitScale : 1)))
     const sepDNData = sepdn.map(r => r.map(v => v / (scaleSepDN ? unitScale : 1)))
-
-    // console.log(state.results.divh)
-    console.log(state.divh)
 
     return (
         <aside className='data-pane-root'>
