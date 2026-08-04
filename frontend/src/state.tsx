@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import { deleteDatasetAPI, getDeviceAPI, rehydrateDatasetAPI, rehydrateResultsAPI, triggerGuavaOpAPI, updateAnchorAPI, updateTargetAPI, updateVisibilityAPI, uploadDicomAPI, uploadRTStructAPI } from './api/client'
+import { deleteDatasetAPI, getDeviceAPI, getDiVHAPI, rehydrateDatasetAPI, rehydrateResultsAPI, triggerGuavaOpAPI, updateAnchorAPI, updateTargetAPI, updateVisibilityAPI, uploadDicomAPI, uploadRTStructAPI } from './api/client'
 import { socket } from './api/websocket'
-import { AppState, Dataset, Job, ResultStore } from './types'
+import { AppState, Dataset, Job, ResponseDiVHSingle, ResultStore } from './types'
 
 
 const AppStateContext = createContext<AppState | null>(null)
@@ -23,8 +23,9 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 	const [localAnchorPX, setLocalAnchorPX] = useState({ 'A': [0, 0, 0], 'B': [0, 0, 0] })
 
 	const [jobs, setJobs] = useState<Job[]>([])
-	const [results, setResults] = useState<ResultStore>({'bsd': {}, 'disp': {}, 'sepd': {}, 'divh': {}, 'sepdn': {}})
+	const [results, setResults] = useState<ResultStore>({'bsd': {}, 'disp': {}, 'sepd': {}, 'divh': [], 'sepdn': {}})
 
+	const [divh, setDiVH] = useState<ResponseDiVHSingle>({ 'A': [], 'B': [] })
 
 	const rehydrate = useCallback(async () => {
 		try {
@@ -190,6 +191,15 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 		})
 	}
 
+	const getDiVH = useCallback(async (roi: string) => {
+		try {
+			const res = await getDiVHAPI(roi)
+			setDiVH(res)
+		} catch (err) {
+			console.error(JSON.stringify(err))
+		}
+	}, [])
+
 
 	const value = useMemo(() => ({
 		device,
@@ -200,7 +210,8 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 		updateAnchor, localAnchorMM, localAnchorPX,
 		updateTarget,
 		jobs, removeJob,
-		trigger, results
+		trigger, results,
+		getDiVH, divh
 	}), [
 		device,
 		uploading, dataset,
@@ -210,7 +221,8 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 		updateAnchor, localAnchorMM, localAnchorPX,
 		updateTarget,
 		jobs, removeJob,
-		trigger, results
+		trigger, results,
+		getDiVH, divh
 	])
 
 	return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>

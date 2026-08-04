@@ -220,3 +220,29 @@
 .data-table-text-neg {
     color: var(--danger)
 }
+
+.data-card-figure-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    /* background-color: red; */
+}
+
+.data-card-figure-legend {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    width: 280px;
+    height: 30px;
+    color: var(--text);
+    font-family: var(--mono);
+}
+
+.data-card-figure-legend-badge {
+    margin: 0px 10px;
+    border-radius: var(--radius);
+    width: 25px;
+    height: 10px;
+}

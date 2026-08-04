@@ -1,7 +1,7 @@
 import guava_rt as gv
 import numpy as np
 
-from .storage import getDataset, getDevice, getGuavaStore
+from .storage import getDataset, getDevice, getGuavaStore, setResult
 
 
 def buildRegions():
@@ -63,6 +63,7 @@ def getBSD():
             "HD": hd[name].item(),
         }
 
+    setResult("bsd", rt)
     return rt
 
 
@@ -72,6 +73,7 @@ def getDisp():
     for name, val in metrics.getROIDisplacementDiff().items():
         rt[name] = val.cpu().numpy().tolist()
 
+    setResult("disp", rt)
     return rt
 
 
@@ -90,13 +92,29 @@ def getSepD():
         _rt = np.asarray(_rt).T
         rt[name] = _rt.tolist()
 
+    setResult("sepd", rt)
     return rt
 
 
 def getDiVH():
-    metrics = buildMetrics(*buildRegions())
+    rA, rB = buildRegions()
 
-    return {}
+    resA = rA.getThresholdedOverlapPercentages("volume", percentages_only=False)
+    resB = rB.getThresholdedOverlapPercentages("volume", percentages_only=False)
+
+    rt = {}
+    for name, res in resA.items():
+        if name not in rt:
+            rt[name] = {"A": None, "B": None}
+        rt[name]["A"] = res[1].cpu().numpy().tolist()
+
+    for name, res in resB.items():
+        if name not in rt:
+            rt[name] = {"A": None, "B": None}
+        rt[name]["B"] = res[1].cpu().numpy().tolist()
+
+    setResult("divh", rt)
+    return list(rt.keys())
 
 
 def getSepDN():
@@ -114,4 +132,5 @@ def getSepDN():
         _rt = np.asarray(_rt).T
         rt[name] = _rt.tolist()
 
+    setResult("sepdn", rt)
     return rt

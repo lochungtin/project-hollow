@@ -47,6 +47,9 @@ export const updateTargetAPI = (slot: string, target: string): Promise<Dataset> 
 export const triggerGuavaOpAPI = (op: string) => _get(`api/guava/queue/${op}`)
 
 
+export const getDiVHAPI = (roi: string) => _get(`api/guava/results/divh/${roi}`)
+
+
 // --- BASE METHODS
 const _base_api = async(path: string, header?: RequestInit) => {
     const res = await fetch(path, header)

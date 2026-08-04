@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 from fastapi import APIRouter, HTTPException
 
 from ..guava import getBSD, getDisp, getDiVH, getSepD, getSepDN
@@ -22,7 +24,14 @@ def getDeviceInfo():
 
 @router.get("/results")
 def rehydrateResults():
-    return getResults()
+    rt = deepcopy(getResults())
+    rt["divh"] = list(rt["divh"].keys())
+    return rt
+
+
+@router.get("/results/divh/{roi}")
+def getDiVHResult(roi):
+    return getResults("divh").get(roi)
 
 
 @router.get("/queue/{job}")

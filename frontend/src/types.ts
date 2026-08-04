@@ -26,7 +26,10 @@ export type AppState = {
     'removeJob': (job: Job) => void,
 
     'results': ResultStore,
-    'trigger': (op: string) => Promise<void>
+    'trigger': (op: string) => Promise<void>,
+    
+    'getDiVH': (roi: string) => Promise<void>,
+    'divh': ResponseDiVHSingle,
 }
 
 
@@ -96,7 +99,7 @@ export type ResultStore = {
     'bsd': ResponseBSD | {},
     'disp': ResponseDisp | {},
     'sepd': ResponseSepD | {},
-    'divh': ResponseDiVH | {},
+    'divh': ResponseDiVH | [],
     'sepdn': ResponseSepDN | {},
 }
 
@@ -112,9 +115,11 @@ export type ResponseSepD = {
     [key: string]: number[][]
 }
 
-export type ResponseDiVH = [
+export type ResponseDiVH = string[]
 
-]
+export type ResponseDiVHSingle = {
+    [key: string]: number[]
+}
 
 export type ResponseSepDN = {
     [key: string]: number[][]

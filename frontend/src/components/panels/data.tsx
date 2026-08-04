@@ -1,3 +1,4 @@
+import { LineChart } from '@mui/x-charts/LineChart'
 import { useState } from 'react'
 import ChevDown from '../../icons/chev-down.svg'
 import ChevLeft from '../../icons/chev-left.svg'
@@ -6,7 +7,6 @@ import { useAppState } from '../../state'
 import { Contour, ResponseSepD, ResponseSepDN } from '../../types'
 import Switch from '../ui/Switch'
 import './data.css'
-
 
 const FALLBACK_TEXT = [
     'Upload contours to start analysing.',
@@ -17,7 +17,7 @@ const FALLBACK_TEXT = [
 const parseContoursNumDiff = (
     A: { [key: string]: Contour },
     B: { [key: string]: Contour },
-    field: "volume" | "surface_area",
+    field: 'volume' | 'surface_area',
     scaleA: number,
     scaleB: number,
     doScale: boolean
@@ -64,7 +64,7 @@ const Card = ({ badge, title, children }: { badge: string, title: string, childr
                 <span className='data-card-badge mono'>{badge}</span>
                 <span className='data-card-title'>{title}</span>
                 <button className='data-card-chev' onClick={(e) => setShowing(!showing)}>
-                    <img className='data-card-chev-img' src={showing ? ChevDown : ChevLeft} alt="toggle" />
+                    <img className='data-card-chev-img' src={showing ? ChevDown : ChevLeft} alt='toggle' />
                 </button>
             </header>
             {showing && <div className='data-card-content'>{children}</div>}
@@ -166,8 +166,54 @@ const Table = (
     </table>)
 }
 
-const Figure = () => {
+const Figure = ({A, B}: {A: number[], B: number[]}) => {   
+    const cutA = A.findIndex((v) => v === 1)
+    const cutB = B.findIndex((v) => v === 1)
+    const cut = Math.ceil(Math.max(cutA, cutB) / 10) * 10
+    console.log(cutA, cutB, cut)
 
+    const _A = A.slice(0, cut)
+    const _B = B.slice(0, cut)
+
+    let x = []
+    for (let i = 0; i < _A.length; ++i)
+        x.push(-i)
+    
+    return <div className='data-card-figure-container'>
+        <LineChart
+            xAxis={[
+                { data: x },
+            ]}
+            series={[
+                { data: _A, color: '#9f79df' },
+                { data: _B, color: '#3cef8e' },
+            ]}
+            slotProps={{
+                legend: {
+                    position: { vertical: 'bottom' },
+                },
+            }}
+            height={200}
+            width={375}
+            sx={{
+                '& .MuiChartsAxis-line': { stroke: '#555' },
+                '& .MuiChartsAxis-tick': { stroke: '#555' },
+                '& .MuiChartsAxis-tickLabel': { fill: '#efefef' },
+                '& .MuiChartsAxis-label': { fill: '#efefef ' },
+            }}
+            margin={{
+                top: 20,
+                right: 20,
+                bottom: 0,
+                left: 0,
+            }}
+        />
+        <div className="data-card-figure-legend">
+            <div className="data-card-figure-legend-badge" style={{ backgroundColor: '#9f79df' }}/><span>Dataset A</span>
+            <div style={{ width: 40 }}/>
+            <div className="data-card-figure-legend-badge" style={{ backgroundColor: '#3cef8e' }}/><span>Dataset B</span>
+        </div>
+    </div>
 }
 
 const DataPane = () => {
@@ -179,14 +225,15 @@ const DataPane = () => {
     const [scaleDisp, setScaleDisp] = useState(true)
     const [scaleSepD, setScaleSepD] = useState(true)
     const [scaleSepDN, setScaleSepDN] = useState(true)
-
+    
     const [selectedSepD, setSelectedSepD] = useState('')
+    const [selectedDiVH, setSelectedDiVH] = useState('')
     const [selectedSepDN, setSelectedSepDN] = useState('')
 
     const state = useAppState()
 
-    const _A = state.dataset["A"]
-    const _B = state.dataset["B"]
+    const _A = state.dataset['A']
+    const _B = state.dataset['B']
 
     const A = _A?.contours ?? {}
     const B = _B?.contours ?? {}
@@ -200,7 +247,7 @@ const DataPane = () => {
     const bSAScale = Math.pow(_B?.scan.spacing[0] ?? 1, 2)
     const unitScale = _A?.scan.spacing[0] ?? 1
 
-    const targetsSet = ((_A && _A?.targetID !== "unknown") && (_B && _B?.targetID !== "unknown")) ?? false
+    const targetsSet = ((_A && _A?.targetID !== 'unknown') && (_B && _B?.targetID !== 'unknown')) ?? false
     const displayStatus = +emptyA + +emptyB + +targetsSet
 
     const volData = parseContoursNumDiff(A, B, 'volume', aVolScale, bVolScale, scaleVol)
@@ -214,6 +261,9 @@ const DataPane = () => {
 
     const sepDData = sepd.map(r => r.map(v => v / (scaleSepD? unitScale : 1)))
     const sepDNData = sepdn.map(r => r.map(v => v / (scaleSepDN ? unitScale : 1)))
+
+    // console.log(state.results.divh)
+    console.log(state.divh)
 
     return (
         <aside className='data-pane-root'>
@@ -235,7 +285,7 @@ const DataPane = () => {
                     <Fallback ready={Object.keys(state.results.bsd).length > 0} fallbackCode={displayStatus} fallbackMax={2} fn={() => state.trigger('bsd')}>
                         <Table
                             rowNames={Object.keys(state.results.bsd)}
-                            colNames={["ASD", "HD95", "HD"]}
+                            colNames={['ASD', 'HD95', 'HD']}
                             data={bsdData}
                             scale={scaleBSD}
                             setScale={setScaleBSD}
@@ -246,7 +296,7 @@ const DataPane = () => {
                     <Fallback ready={Object.keys(state.results.disp).length > 0} fallbackCode={displayStatus} fallbackMax={2} fn={() => state.trigger('disp')}>
                         <Table
                             rowNames={Object.keys(state.results.disp)}
-                            colNames={["AXIS 1", "AXIS 2", "AXIS 3"]}
+                            colNames={['AXIS 1', 'AXIS 2', 'AXIS 3']}
                             data={dispData}
                             scale={scaleDisp}
                             setScale={setScaleDisp}
@@ -262,8 +312,8 @@ const DataPane = () => {
                         />
                         {selectedSepD ?
                             <Table
-                                rowNames={["MIN", "5th", "AVG", "95th", "MAX"]}
-                                colNames={["Dataset A", "Dataset B", "Abs Diff"]}
+                                rowNames={['MIN', '5th', 'AVG', '95th', 'MAX']}
+                                colNames={['Dataset A', 'Dataset B', 'Abs Diff']}
                                 data={sepDData}
                                 scale={scaleSepD}
                                 setScale={setScaleSepD}
@@ -277,8 +327,23 @@ const DataPane = () => {
                     </Fallback>
                 </Card>
                 <Card badge='DiVH' title='Distance Volume Histogram'>
-                    <Fallback ready={false} fallbackCode={displayStatus} fallbackMax={3} fn={() => state.trigger('divh')}>
-
+                    <Fallback ready={state.results.divh.length > 0} fallbackCode={displayStatus} fallbackMax={3} fn={() => state.trigger('divh')}>
+                        <ColumnSelector
+                            selection={state.results.divh}
+                            selected={selectedDiVH}
+                            fn={s => {
+                                setSelectedDiVH(s)
+                                state.getDiVH(s)
+                            }}
+                        />
+                        {selectedDiVH ?
+                            <Figure A={state.divh['A']} B={state.divh['B']} /> : 
+                            <div className='data-card-fallback'>
+                                <div className='data-card-fallback-blur'>
+                                    Select a contour to display results.
+                                </div>
+                            </div>
+                        }
                     </Fallback>
                 </Card>
                 <Card badge='SD-N' title='Separation Distance - Nearside Surface'>
@@ -290,8 +355,8 @@ const DataPane = () => {
                         />
                         {selectedSepDN ?
                             <Table
-                                rowNames={["MIN", "5th", "AVG", "95th", "MAX"]}
-                                colNames={["Dataset A", "Dataset B", "Abs Diff"]}
+                                rowNames={['MIN', '5th', 'AVG', '95th', 'MAX']}
+                                colNames={['Dataset A', 'Dataset B', 'Abs Diff']}
                                 data={sepDNData}
                                 scale={scaleSepDN}
                                 setScale={setScaleSepDN}
