@@ -273,7 +273,7 @@ const Card = ({ slot }: { slot: string }) => {
     }
 
     return (
-        <section className={`info-card ${1 ? 'info-card-active' : ''}`}>
+        <section className={`info-card ${state.activeSlot === slot ? 'info-card-active' : ''}`}>
             <header className='info-card-header'>
                 <span className='info-card-badge'>{slot}</span>
                 <span className='info-card-name'>{ds ? `Dataset ${slot}` : 'Empty Slot'}</span>
