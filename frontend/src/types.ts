@@ -4,6 +4,9 @@ export type HTTPPayload = { [key: string]: any }
 export type AppState = {
     'device': string,
     
+    'activeSlot': string,
+    'setActiveSlot': (slot: string) => void,
+
     'uploading': { [key: string]: boolean },
     'dataset': { [key: string]: Dataset | null },
 

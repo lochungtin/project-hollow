@@ -16,6 +16,7 @@ export const useAppState = () => {
 export const AppStateProvider = ({ children }: { children: React.ReactNode }) => {
 	const [device, setDevice] = useState('Loading...')
 
+	const [activeSlot, setActiveSlot] = useState('A')
 	const [dataset, setDataset] = useState({ 'A': null, 'B': null })
 	const [uploading, setUploading] = useState({ 'A': false, 'B': false })
 
@@ -203,6 +204,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 
 	const value = useMemo(() => ({
 		device,
+		activeSlot, setActiveSlot,
 		uploading, dataset,
 		uploadDicom, uploadRTStruct, deleteDataset,
 		updateVisibility,
@@ -214,6 +216,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 		getDiVH, divh
 	}), [
 		device,
+		activeSlot, setActiveSlot,
 		uploading, dataset,
 		uploadDicom, uploadRTStruct, deleteDataset,
 		updateVisibility,
