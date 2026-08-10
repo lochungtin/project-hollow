@@ -3,6 +3,7 @@ import numpy as np
 from fastapi import APIRouter, HTTPException, UploadFile
 
 from ..models.dataset import Dataset
+from ..models.image import orthogonal
 from ..parser import toContourObjs, toScanObj
 from ..storage import (
     clearDataset,
@@ -67,6 +68,12 @@ async def delete_dataset(slot: str):
     clearDataset(slot)
     clearGuavaStore(slot)
     return {"ok": True}
+
+
+@router.get("/{slot}/slice/{ax}/{idx}")
+def getOrthogonal(slot: str, ax: str, idx: int):
+    dataset = getDataset(slot)
+    return orthogonal(dataset.scan, ax, idx).summary()
 
 
 # --- VISIBILITY

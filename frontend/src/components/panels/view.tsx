@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import SceneManager from '../../scene/manager'
 import { useAppState } from '../../state'
 import './view.css'
 
@@ -6,7 +7,7 @@ import './view.css'
 const ViewPane = () => {
     const state = useAppState()
     const refContainer = useRef<HTMLDivElement | null>(null)
-    const refScene = useRef<HTMLDivElement | null>(null)
+    const refScene = useRef<SceneManager | null>(null)
 
     const spaceHeld = useRef(false)
 
@@ -17,10 +18,23 @@ const ViewPane = () => {
     refActiveSlot.current = state.activeSlot
 
     useEffect(() => {
+        if (!refContainer.current)
+            return
+
+        const scene = new SceneManager(refContainer.current)
+        refScene.current = scene
+
+        return () => {
+            scene.dispose()
+            refScene.current = null
+        }
+    })
+
+    useEffect(() => {
         const container = refContainer.current
         const scene = refScene.current
-        // if (!container || !scene)
-            // return
+        if (!container || !scene)
+            return
 
         const onWheel = (e: WheelEvent) => {
             e.preventDefault()

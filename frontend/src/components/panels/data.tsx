@@ -212,7 +212,7 @@ const Figure = ({A, B}: {A: number[], B: number[]}) => {
 }
 
 const DataPane = () => {
-    const [open, setOpen] = useState(true)
+    const [open, setOpen] = useState(false)
 
     const [scaleVol, setScaleVol] = useState(true)
     const [scaleSA, setScaleSA] = useState(true)

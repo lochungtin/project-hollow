@@ -14,13 +14,15 @@ const App = () => {
 	return (
 		<div className='app-shell'>
 			<Toolbar />
-			<div className='app-body'>
-				<InfoPane />
-				<ViewPane />
+			<main className='app-content'>
+				<div className='app-body'>
+					<InfoPane />
+					<ViewPane />
+				</div>
 				<DataPane />
-			</div>
-			<ToastContainer />
-			<Alert />
+				<ToastContainer />
+				<Alert />
+			</main>
 		</div>
 	)
 }

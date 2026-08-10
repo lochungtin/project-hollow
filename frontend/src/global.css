@@ -72,6 +72,13 @@ body {
     overflow: hidden;
 }
 
+.app-content {
+    position: relative;
+    display: flex;
+    flex: 1;
+    min-height: 0;
+}
+
 .app-body {
     display: flex;
     flex: 1;
