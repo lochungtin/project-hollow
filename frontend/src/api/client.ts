@@ -1,4 +1,4 @@
-import { Dataset, HTTPPayload, ResultStore } from "../types"
+import { Dataset, HTTPPayload, ResponseSlice, ResultStore } from "../types"
 
 // --- EXPOSED APIS
 // rehydrate cached data
@@ -31,6 +31,10 @@ export const updateVisibilityAPI = (slot: string, type: string, visible: boolean
         return _put(`/api/dataset/${slot}/${type}/${id}/visibility`, payload)
     return _put(`/api/dataset/${slot}/${type}/visibility`, payload)
 }
+
+// get slice
+export const getOrthogonal = (slot: string, ax: string, idx: number): Promise<ResponseSlice> => 
+    _get(`/api/dataset/${slot}/slice/${ax}/${idx}`)
 
 // target and anchor handling
 export const updateAnchorAPI = (slot: string, anchor: number[], id: string): Promise<Dataset> => {

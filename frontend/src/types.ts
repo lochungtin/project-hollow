@@ -1,5 +1,8 @@
-export type HTTPPayload = { [key: string]: any }
+import * as THREE from 'three'
 
+export type Vec3D = [number, number, number]
+
+export type HTTPPayload = { [key: string]: any }
 
 export type AppState = {
     'device': string,
@@ -41,10 +44,10 @@ export type Dataset = {
     'scan': Scan,
     'targetID': string,
     'anchorID': string,
-    'anchor': number[],
-    'alignment': number[],
+    'anchor': Vec3D,
+    'alignment': Vec3D,
     'render': {
-        'rotation': number[],
+        'rotation': Vec3D,
     },
     'contours': {
         [key: string]: Contour
@@ -53,8 +56,8 @@ export type Dataset = {
 
 export type Scan = {
     'id': string,
-    'shape': number[],
-    'spacing': number[],
+    'shape': Vec3D,
+    'spacing': Vec3D,
     'modality': string,
     'range': number[],
     'visible': boolean,
@@ -69,7 +72,7 @@ export type Contour = {
     'has_mesh': boolean,
     'volume': number,
     'surface_area': number,
-    'center_of_mass': number[],
+    'center_of_mass': Vec3D,
 }
 
 export type Mesh = {
@@ -126,4 +129,33 @@ export type ResponseDiVHSingle = {
 
 export type ResponseSepDN = {
     [key: string]: number[][]
+}
+
+
+
+
+export type ResponseSlice = {
+    'url': string,
+    'center': Vec3D,
+    'dU': Vec3D,
+    'dV': Vec3D,
+    'width': number,
+    'height': number,
+}
+
+export type Axis = 'axial' | 'coronal' | 'sagittal'
+
+export type VisDataset = {
+    'inner': THREE.Group,
+    'outer': THREE.Group,
+    'anchor': Vec3D,
+    'outs': { [key: string]: THREE.Object3D },
+    'slices': { [key: string]: THREE.Object3D },
+}
+
+export type SliceState = {
+    'mode': Axis,
+    'idx': { [key: string]: number },
+    'anchor': Vec3D,
+    'normal': Vec3D,
 }

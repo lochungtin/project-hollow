@@ -8,7 +8,7 @@ from PIL import Image
 
 @dataclass
 class Slice:
-    uri: str
+    url: str
     center: tuple[float, float, float]
     dU: tuple[float, float, float]
     dV: tuple[float, float, float]
@@ -17,7 +17,7 @@ class Slice:
 
     def summary(self):
         return {
-            "uri": self.uri,
+            "url": self.url,
             "center": list(self.center),
             "dU": list(self.dU),
             "dV": list(self.dV),
@@ -60,10 +60,10 @@ def orthogonal(scan, ax, idx):
     else:
         img = scan.array[:, :, idx]
 
-    return Slice(uri=toURI(img), center=c, dU=dU, dV=dV, width=dims[0], height=dims[1])
+    return Slice(url=toURL(img), center=c, dU=dU, dV=dV, width=dims[0], height=dims[1])
 
 
-def toURI(arr):
+def toURL(arr):
     mn, mx = float(arr.min()), float(arr.max())
     if mx - mn < 1e-6:
         norm = np.zeros_like(arr, np.uint8)
