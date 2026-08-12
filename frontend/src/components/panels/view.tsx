@@ -4,9 +4,12 @@ import { getOrthogonal } from '../../api/client'
 import SceneManager from '../../scene/manager'
 import { render } from '../../scene/scan'
 import { useAppState } from '../../state'
-import { SliceState, Vec3D } from '../../types'
+import { Axis, SliceState, Vec3D } from '../../types'
 import './view.css'
 
+
+const AXIS_NUM_MAP: { [key: string]: Axis } = {'1': 'axial', '2': 'coronal', '3': 'sagittal'}
+const AXIS_NORM_MAP: { [key: string]: Vec3D } = {'1': [0, 0, 1], '2': [0, 1, 0], '3': [1, 0, 0]}
 
 const sliceState = (anchor: Vec3D): SliceState => ({
     'mode': 'axial',
@@ -129,18 +132,6 @@ const ViewPane = () => {
                 spaceHeld.current = true
                 return
             }
-            
-            // toggle cardinal axis
-            if (e.key === '1' || e.key === '2' || e.key === '3') {
-                console.log(`Axis change: ${e.key}`)
-                return
-            }
-
-            // switch to arbitrary axis
-            if (e.key === '4') {
-                console.log(`Axis change: ${e.key}`)
-                return
-            }
 
             // toggle active slot
             if (e.key === 'Tab') {
@@ -150,6 +141,28 @@ const ViewPane = () => {
                 refState.current.setActiveSlot(newSlot)
                 return
             }
+
+            const slot = refActiveSlot.current
+            const slice = refSlice.current[slot]
+            
+            // toggle cardinal axis
+            if (e.key === '1' || e.key === '2' || e.key === '3') {
+                console.log(`Axis change: ${e.key}`)
+
+                slice.normal = AXIS_NORM_MAP[e.key]
+                slice.anchor = refState.current.dataset[slot]?.anchor ?? [0, 0, 0]
+                slice.mode = AXIS_NUM_MAP[e.key]
+                refreshSlice(slot)
+                return
+            }
+
+            // switch to arbitrary axis
+            if (e.key === '4') {
+                console.log(`Axis change: ${e.key}`)
+                return
+            }
+
+            
         }
 
         const onKeyUp = (e: KeyboardEvent) => {
@@ -190,8 +203,8 @@ const ViewPane = () => {
                 refScanID.current[slot] = dataset.scan.id
                 refSlice.current[slot] = sliceState(dataset.anchor)
 
-                const shape = dataset.scan.shape
-                const [z, y, x] = shape
+                const [z, y, x] = dataset.scan.shape
+                const [oZ, oY, oX] = dataset.scan.origin
                 const [sZ, sY, sX] = dataset.scan.spacing
 
                 refSlice.current[slot].idx = {
@@ -200,7 +213,7 @@ const ViewPane = () => {
                     'sagittal': Math.floor((x - 1) / 2),
                 }
 
-                scene.setCamera(dataset.anchor, Math.max(x * sX, y * sY, z * sZ) / 2)
+                scene.setCamera(dataset.anchor, Math.max(x * sX, y * sY, z * sZ) / 1.5  )
                 refreshSlice(slot)
             }
         })

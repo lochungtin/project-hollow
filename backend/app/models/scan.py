@@ -26,6 +26,7 @@ class Scan:
             "id": self.id,
             "shape": list(self.shape),
             "spacing": list(self.spacing),
+            "origin": list(self.origin),
             "modality": self.modality,
             "range": list(self.range),
             "visible": self.visible,

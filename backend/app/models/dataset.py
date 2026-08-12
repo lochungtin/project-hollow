@@ -20,12 +20,16 @@ class Dataset:
     alignment: np.ndarray = field(default_factory=lambda: np.zeros(3, float))
     contours: dict[str, Contour] = field(default_factory=dict)
     rotation: np.ndarray = field(default_factory=lambda: np.zeros(3, float))
+
     # surfaces: dict[str, Surface] = {}
     # distance_maps: dict[str, DistanceMap] = {}
     # volume_mesh_cache: dict[float, Mesh] = {}
 
     def __post_init__(self):
-        self.anchor = np.asarray(self.scan.shape) // 2
+        z, y, x = self.scan.shape
+        sZ, sY, sX = self.scan.spacing
+        oX, oY, oZ = self.scan.origin
+        self.anchor = np.asarray([oX + (x * sX), oY + (y * sY), oZ + (z * sZ)]) // 2
 
     def summary(self):
         return {

@@ -22,7 +22,7 @@ export default class SceneManager {
         this.container = container
 
         this.scene = new THREE.Scene()
-        this.scene.background = new THREE.Color(0x311111)
+        this.scene.background = new THREE.Color(0x111111)
 
         this.camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100000)
         this.updateCamera()
@@ -108,6 +108,7 @@ export default class SceneManager {
     }
 
     setDatasetTrans(slot: string, anchor: Vec3D, offset: Vec3D, rotation: Vec3D) {
+        console.log('trans')
         const d = this.dataset[slot]
         d.anchor = anchor
         d.inner.position.set(-anchor[0], -anchor[1], -anchor[2])

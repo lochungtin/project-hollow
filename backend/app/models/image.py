@@ -55,7 +55,7 @@ def orthogonal(scan, ax, idx):
 
     if ax == "axial":
         img = scan.array[idx, :, :]
-    elif ax == "sagittal":
+    elif ax == "coronal":
         img = scan.array[:, idx, :]
     else:
         img = scan.array[:, :, idx]
@@ -68,7 +68,7 @@ def toURL(arr):
     if mx - mn < 1e-6:
         norm = np.zeros_like(arr, np.uint8)
     else:
-        norm = ((arr - mn) / (mx - mn)).astype(np.uint8)
+        norm = ((arr - mn) / (mx - mn) * 255.0).astype(np.uint8)
 
     buffer = BytesIO()
     Image.fromarray(norm, mode="L").save(buffer, format="PNG")

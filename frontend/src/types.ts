@@ -58,6 +58,7 @@ export type Scan = {
     'id': string,
     'shape': Vec3D,
     'spacing': Vec3D,
+    'origin': Vec3D,
     'modality': string,
     'range': number[],
     'visible': boolean,
