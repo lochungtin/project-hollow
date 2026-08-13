@@ -12,7 +12,7 @@ from ..storage import (
     getGuavaStore,
     setDataset,
 )
-from .payload import AnchorPayload, TargetPayload, VisibilityPayload
+from .payload import AlignmentPayload, AnchorPayload, TargetPayload, VisibilityPayload
 
 router = APIRouter(prefix="/api/dataset", tags=["datasets"])
 
@@ -94,11 +94,28 @@ def update_scan_visibility(slot: str, body: TargetPayload):
 
 
 # --- ANCHOR
+# `anchor` picks *which* point (in absolute patient-space mm) gets pinned to the dataset's
+# local origin; `alignment` is where that pinned point then sits in world space, relative to
+# the (fixed, never-moving) axes at world origin. Choosing a new anchor point resets alignment
+# to zero so that point lands exactly on world origin, rather than at a stale offset left over
+# from a previous manual translation.
 @router.put("/{slot}/anchor")
-def update_scan_visibility(slot: str, body: AnchorPayload):
+def update_anchor(slot: str, body: AnchorPayload):
     dataset = getDataset(slot)
     dataset.anchorID = body.id
-    dataset.anchor = np.asarray([body.x, body.y, body.z]).astype(int)
+    dataset.anchor = np.asarray([body.x, body.y, body.z], dtype=float)
+    dataset.alignment = np.zeros(3, dtype=float)
+    return dataset.summary()
+
+
+# --- ALIGNMENT
+# Manual translation of the dataset (scan + contours), relative to world origin. The axes
+# never move; this offsets where the anchor point (and everything else in the dataset) is
+# rendered.
+@router.put("/{slot}/alignment")
+def update_alignment(slot: str, body: AlignmentPayload):
+    dataset = getDataset(slot)
+    dataset.alignment = np.asarray([body.x, body.y, body.z], dtype=float)
     return dataset.summary()
 
 

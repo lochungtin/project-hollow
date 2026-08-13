@@ -23,6 +23,7 @@ export type AppState = {
     'localAnchorPX': { [key: string]: number[] },
 
     'updateAnchor': (slot: string, anchor: number[], id?: string) => Promise<void>,
+    'updateAlignment': (slot: string, alignment: number[]) => Promise<void>,
     'updateLocalAnchorMM': (slot: string, anchor: number[]) => void,
     'updateLocalAnchorPX': (slot: string, anchor: number[]) => void,
 

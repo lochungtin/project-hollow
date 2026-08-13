@@ -50,9 +50,17 @@ export const getNearside = (slot: string, id: string): Promise<ResponseMesh> =>
 
 
 // target and anchor handling
+// picks which point (absolute patient-space mm) is pinned to the dataset's local origin;
+// resets alignment to zero server-side so that point lands exactly on world origin
 export const updateAnchorAPI = (slot: string, anchor: number[], id: string): Promise<Dataset> => {
     const payload = {"x": anchor[0], "y": anchor[1], "z": anchor[2], "id": id}
     return _put(`/api/dataset/${slot}/anchor`, payload)
+}
+
+// manual translation of the dataset, relative to world origin (mm)
+export const updateAlignmentAPI = (slot: string, alignment: number[]): Promise<Dataset> => {
+    const payload = {"x": alignment[0], "y": alignment[1], "z": alignment[2]}
+    return _put(`/api/dataset/${slot}/alignment`, payload)
 }
 
 export const updateTargetAPI = (slot: string, target: string): Promise<Dataset> => {

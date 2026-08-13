@@ -212,6 +212,22 @@ export default class SceneManager {
         })
     }
 
+    // ctrl+tab: show both slots' content together (so both sets of contours render at once),
+    // with each slot's scan slice hidden first — a pure view-layer override, contour
+    // visibility and dataset.scan.visible are left untouched. Exiting just falls back to the
+    // normal single-slot display via setActiveSlot('A').
+    setDualMode(active: boolean) {
+        if (!active) {
+            this.setActiveSlot('A')
+            return
+        }
+
+        Object.keys(this.dataset).forEach(slot => {
+            this.dataset[slot].outer.visible = true
+            this.setScanVisibility(slot, false)
+        })
+    }
+
     // --- DATASET
     private makeDataset(slot: string): VisDataset {
         const inner = new THREE.Group()

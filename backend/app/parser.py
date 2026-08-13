@@ -144,11 +144,19 @@ def toContourObjs(slot, fileBytes, scan):
         if not mask.any():
             continue
 
+        gvMask = gv.Mask(mask, getDevice())
+
+        # gvMask.center_of_mass is the mean voxel *index*, in (z, y, x) array order —
+        # convert to absolute patient-space mm, (x, y, z), matching scan.origin/anchor
+        zi, yi, xi = gvMask.center_of_mass.cpu().numpy().tolist()
+        centerOfMass = (oX + xi * sX, oY + yi * sY, oZ + zi * sZ)
+
         contour = Contour(
             name=name,
             number=number,
             color=color,
-            mask=gv.Mask(mask, getDevice()),
+            mask=gvMask,
+            center_of_mass=centerOfMass,
             mesh=Mesh.fromArr(mask, scan),
         )
         contours[contour.id] = contour

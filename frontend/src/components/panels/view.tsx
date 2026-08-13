@@ -34,6 +34,7 @@ const ViewPane = () => {
     const refScene = useRef<SceneManager | null>(null)
 
     const spaceHeld = useRef(false)
+    const dualMode = useRef(false)
 
     const refState = useRef(state)
     const refActiveSlot = useRef(state.activeSlot)
@@ -179,9 +180,35 @@ const ViewPane = () => {
                 return
             }
 
-            // toggle active slot
+            // dual mode — render both slots' contours together, scans hidden.
+            // Contour visibility is untouched either way.
+            if (e.key === 'd') {
+                e.preventDefault()
+                dualMode.current = true
+                refScene.current?.setDualMode(true)
+
+                // scene.setDualMode only hides the scan meshes currently in the scene —
+                // refreshSlice (e.g. on scroll) stamps mesh.visible from dataset.scan.visible
+                // on every newly created mesh, so without actually flipping that (the same
+                // action onClickVisible in info.tsx performs) a scroll would bring it right
+                // back. Force it off, same call, both loaded slots.
+                const loadedSlots = ['A', 'B'].filter(s => refState.current.dataset[s])
+                loadedSlots.forEach(s => refState.current.updateVisibility(s, 'scan', false))
+                return
+            }
+
+            // toggle active slot — while in dual mode, Tab instead exits back to slot A only
+            // (scans are left hidden; the visibility toggle in the info panel still works)
             if (e.key === 'Tab') {
                 e.preventDefault()
+
+                if (dualMode.current) {
+                    dualMode.current = false
+                    refScene.current?.setDualMode(false)
+                    refState.current.setActiveSlot('A')
+                    return
+                }
+
                 const newSlot = refState.current.activeSlot === 'A' ? 'B' : 'A'
                 console.log(`Change active slot to ${newSlot}`)
                 refState.current.setActiveSlot(newSlot)

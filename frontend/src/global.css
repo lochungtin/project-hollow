@@ -78,12 +78,14 @@ body {
     display: flex;
     flex: 1;
     width: 100%;
+    min-height: 0;
 }
 
 .app-body {
     display: flex;
     flex: 1;
     width: 100%;
+    min-height: 0;
 }
 
 ::-webkit-scrollbar {

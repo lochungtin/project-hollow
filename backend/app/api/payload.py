@@ -14,3 +14,9 @@ class AnchorPayload(BaseModel):
     y: float
     z: float
     id: str
+
+
+class AlignmentPayload(BaseModel):
+    x: float
+    y: float
+    z: float

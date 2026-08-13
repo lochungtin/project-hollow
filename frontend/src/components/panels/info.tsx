@@ -86,6 +86,11 @@ const ContentLoaded = ({ slot }: { slot: string }) => {
         e.target.value = ''
     }
 
+    // Anchor (mm/px) fields edit `alignment` — where the currently-pinned anchor point sits,
+    // relative to world origin (the fixed axes intersection). (0, 0, 0) means the anchor
+    // point sits exactly on world origin; the axes never move, only the dataset does.
+    // px = mm / spacing (spacing is mm per voxel).
+
     // --- ANCHOR CHANGES MM
     const _onAnchorMMChange = (e: React.ChangeEvent<HTMLInputElement>, slot: string, axes: number) => {
         console.log('_onAnchorMMChange', slot, axes, e.target.value)
@@ -101,7 +106,7 @@ const ContentLoaded = ({ slot }: { slot: string }) => {
         temp[axes] = parseFloat(e.target.value)
         state.updateLocalAnchorMM(slot, temp)
 
-        let converted = temp.map((v, i) => v * scan.spacing[i])
+        let converted = temp.map((v, i) => v / scan.spacing[i])
         state.updateLocalAnchorPX(slot, converted)
     }
 
@@ -120,15 +125,15 @@ const ContentLoaded = ({ slot }: { slot: string }) => {
         temp[axes] = parseFloat(e.target.value)
         state.updateLocalAnchorPX(slot, temp)
 
-        let converted = temp.map((v, i) => v / scan.spacing[i])
+        let converted = temp.map((v, i) => v * scan.spacing[i])
         state.updateLocalAnchorMM(slot, converted)
     }
 
-    // --- ANCHOR UPDATE
+    // --- ALIGNMENT UPDATE (translate the dataset relative to world origin)
     const _onClickAnchorSet = (e: React.MouseEvent, slot: string) => {
-        console.log('_onClickAnchorUpdate', slot, state.localAnchorPX[slot])
+        console.log('_onClickAnchorUpdate', slot, state.localAnchorMM[slot])
 
-        state.updateAnchor(slot, state.localAnchorPX[slot])
+        state.updateAlignment(slot, state.localAnchorMM[slot])
     }
 
     // --- CONTOUR ACTIONS

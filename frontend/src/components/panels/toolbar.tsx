@@ -20,6 +20,7 @@ const Toolbar = () => {
                 </div>                
                 <span className='toolbar-hints mono'>
                     [Tab] dataset &middot;
+                    [Ctrl + Tab] dual mode &middot;
                     [1/2/3/4] change axis &middot;
                     [Scroll] slice &middot;
                     [Space + Scroll] rotate &middot;

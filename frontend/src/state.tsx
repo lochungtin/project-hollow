@@ -1,7 +1,16 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import { deleteDatasetAPI, getDeviceAPI, getDiVHAPI, rehydrateDatasetAPI, rehydrateResultsAPI, triggerGuavaOpAPI, updateAnchorAPI, updateTargetAPI, updateVisibilityAPI, uploadDicomAPI, uploadRTStructAPI } from './api/client'
+import { deleteDatasetAPI, getDeviceAPI, getDiVHAPI, rehydrateDatasetAPI, rehydrateResultsAPI, triggerGuavaOpAPI, updateAlignmentAPI, updateAnchorAPI, updateTargetAPI, updateVisibilityAPI, uploadDicomAPI, uploadRTStructAPI } from './api/client'
 import { socket } from './api/websocket'
 import { AppState, Dataset, Job, ResponseDiVHSingle, ResultStore } from './types'
+
+// the anchor point always maps to world origin (see SceneManager.setDatasetTrans); alignment
+// is where it's then placed, relative to that same world origin — so alignment IS the
+// "anchor position relative to world origin" the MM/PX fields are meant to show and edit.
+// mm is alignment as-is; px is mm divided by voxel spacing (spacing is mm per voxel).
+const localAnchorFromAlignment = (alignment: number[], spacing: number[]) => ({
+    mm: alignment.map((v: number) => Math.round(v)),
+    px: alignment.map((v: number, i: number) => Math.round(v / spacing[i])),
+})
 
 
 const AppStateContext = createContext<AppState | null>(null)
@@ -37,12 +46,11 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 
 			Object.entries(datasets).forEach(([slot, ds]) => {
 				if (ds) {
-					const lAnchorMM = ds.anchor.map(x => Math.round(x / ds.scan.spacing[0]))
-					const lAnchorPX = ds.anchor
+					const { mm, px } = localAnchorFromAlignment(ds.alignment, ds.scan.spacing)
 
 					setDataset((prev) => ({ ...prev, [slot]: ds }))
-					setLocalAnchorMM((prev) => ({ ...prev, [slot]: lAnchorMM }))
-					setLocalAnchorPX((prev) => ({ ...prev, [slot]: lAnchorPX }))
+					setLocalAnchorMM((prev) => ({ ...prev, [slot]: mm }))
+					setLocalAnchorPX((prev) => ({ ...prev, [slot]: px }))
 				}
 			})
 		} catch {
@@ -89,12 +97,11 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 		try {
 			const ds: Dataset = await uploadDicomAPI(slot, files)
 
-			const lAnchorMM = ds.anchor.map(x => Math.round(x / ds.scan.spacing[0]))
-			const lAnchorPX = ds.anchor
+			const { mm, px } = localAnchorFromAlignment(ds.alignment, ds.scan.spacing)
 
 			setDataset((prev) => ({ ...prev, [slot]: ds }))
-			setLocalAnchorMM((prev) => ({ ...prev, [slot]: lAnchorMM }))
-			setLocalAnchorPX((prev) => ({ ...prev, [slot]: lAnchorPX }))
+			setLocalAnchorMM((prev) => ({ ...prev, [slot]: mm }))
+			setLocalAnchorPX((prev) => ({ ...prev, [slot]: px }))
 
 		} catch (err) {
 			console.error(JSON.stringify(err))
@@ -145,16 +152,34 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 		setLocalAnchorPX((prev) => ({ ...prev, [slot]: ints }))
 	}
 
+	// picks which point becomes the anchor (e.g. a contour's center of mass); the backend
+	// resets alignment to zero when this happens, so that point lands exactly on world
+	// origin — reflect that in the local MM/PX display too.
 	const updateAnchor = useCallback(async (slot: string, anchor: number[], id: string = 'unknown') => {
 		try {
 			const ds = await updateAnchorAPI(slot, anchor, id)
 
-			const lAnchorMM = ds.anchor.map((x: number) => Math.round(x / ds.scan.spacing[0]))
-			const lAnchorPX = ds.anchor
+			const { mm, px } = localAnchorFromAlignment(ds.alignment, ds.scan.spacing)
 
 			setDataset((prev) => ({ ...prev, [slot]: ds }))
-			setLocalAnchorMM((prev) => ({ ...prev, [slot]: lAnchorMM }))
-			setLocalAnchorPX((prev) => ({ ...prev, [slot]: lAnchorPX }))
+			setLocalAnchorMM((prev) => ({ ...prev, [slot]: mm }))
+			setLocalAnchorPX((prev) => ({ ...prev, [slot]: px }))
+
+		} catch (err) {
+			console.error(JSON.stringify(err))
+		}
+	}, [])
+
+	// manual translation of the dataset, relative to world origin
+	const updateAlignment = useCallback(async (slot: string, alignment: number[]) => {
+		try {
+			const ds = await updateAlignmentAPI(slot, alignment)
+
+			const { mm, px } = localAnchorFromAlignment(ds.alignment, ds.scan.spacing)
+
+			setDataset((prev) => ({ ...prev, [slot]: ds }))
+			setLocalAnchorMM((prev) => ({ ...prev, [slot]: mm }))
+			setLocalAnchorPX((prev) => ({ ...prev, [slot]: px }))
 
 		} catch (err) {
 			console.error(JSON.stringify(err))
@@ -209,7 +234,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 		uploadDicom, uploadRTStruct, deleteDataset,
 		updateVisibility,
 		updateLocalAnchorMM, updateLocalAnchorPX,
-		updateAnchor, localAnchorMM, localAnchorPX,
+		updateAnchor, updateAlignment, localAnchorMM, localAnchorPX,
 		updateTarget,
 		jobs, removeJob,
 		trigger, results,
@@ -221,7 +246,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 		uploadDicom, uploadRTStruct, deleteDataset,
 		updateVisibility,
 		updateLocalAnchorMM, updateLocalAnchorPX,
-		updateAnchor, localAnchorMM, localAnchorPX,
+		updateAnchor, updateAlignment, localAnchorMM, localAnchorPX,
 		updateTarget,
 		jobs, removeJob,
 		trigger, results,

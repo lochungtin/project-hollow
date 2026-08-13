@@ -14,6 +14,10 @@ class Contour:
     number: int
     color: tuple[int, int, int]
     mask: gv.Mask
+    # absolute patient-space mm, (x, y, z) — NOT gv.Mask.center_of_mass, which is the mean
+    # voxel *index* in (z, y, x) array order and isn't usable as an anchor coordinate as-is.
+    # Computed by the caller (parser.toContourObjs), which has the scan's spacing/origin.
+    center_of_mass: tuple[float, float, float]
     mesh: Optional[Mesh] = None
     visible: bool = True
     id: str = field(default_factory=lambda: uuid.uuid4().hex[:12])
@@ -28,5 +32,5 @@ class Contour:
             "has_mesh": self.mesh is not None,
             "volume": self.mask.volume.cpu().item(),
             "surface_area": self.mask.surface_area().cpu().item(),
-            "center_of_mass": self.mask.center_of_mass.cpu().numpy().tolist(),
+            "center_of_mass": list(self.center_of_mass),
         }
