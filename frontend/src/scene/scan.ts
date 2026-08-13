@@ -43,6 +43,53 @@ export const sliceGeometry = (scan: Scan, ax: Axis, idx: number): Omit<ResponseS
     }
 }
 
+// mirrors backend/app/models/image.py::_arbitraryDim() — pixel/index bound sized to the
+// volume's bounding-box diagonal, so the whole scan is covered regardless of the plane's
+// orientation, and shared as the scroll limit for arbitrary-axis slicing
+const arbitraryDim = (scan: Scan): { dim: number, spacing: number } => {
+    const [z, y, x] = scan.shape
+    const [sZ, sY, sX] = scan.spacing
+    const spacing = sX // isometric after resample
+
+    const shX = (x - 1) * sX
+    const shY = (y - 1) * sY
+    const shZ = (z - 1) * sZ
+    const diag = Math.sqrt(shX ** 2 + shY ** 2 + shZ ** 2)
+
+    return { dim: Math.max(2, Math.round(diag / spacing)), spacing }
+}
+
+export const arbitraryMaxIdx = (scan: Scan): number => Math.floor(arbitraryDim(scan).dim / 2)
+
+// mirrors backend/app/models/image.py::_orthonormalBasis() + arbitrary() geometry, without
+// clamping idx so out-of-range slices can still be positioned/rendered as blanks. `anchor` is
+// the plane's reference point (absolute patient-space mm) at idx=0 — always the dataset's own
+// anchor, since that's the point that maps to world origin (see setDatasetTrans).
+export const arbitrarySliceGeometry = (scan: Scan, anchor: Vec3D, normal: Vec3D, idx: number): Omit<ResponseSlice, 'url'> => {
+    const nRaw = new THREE.Vector3(...normal)
+    const n = nRaw.lengthSq() > 1e-18 ? nRaw.clone().normalize() : new THREE.Vector3(0, 0, 1)
+
+    // matches the established cardinal dV convention (axial=(0,-1,0), coronal/sagittal=
+    // (0,0,-1)) generalized to any orientation — project a fixed "up" reference onto the
+    // plane, falling back to the same secondary reference axial itself uses when the plane
+    // is too close to axial (SI) for SI to serve as an in-plane "up" direction.
+    const ref = Math.abs(n.z) > 0.9 ? new THREE.Vector3(0, -1, 0) : new THREE.Vector3(0, 0, -1)
+    const v = ref.clone().sub(n.clone().multiplyScalar(ref.dot(n))).normalize()
+    const u = new THREE.Vector3().crossVectors(v, n) // keeps cross(u, v) == n
+
+    const { dim, spacing } = arbitraryDim(scan)
+    const center = new THREE.Vector3(...anchor).addScaledVector(n, idx * spacing)
+    const extent = dim * spacing
+
+    return {
+        center: [center.x, center.y, center.z],
+        dU: [u.x, u.y, u.z],
+        dV: [v.x, v.y, v.z],
+        width: extent,
+        height: extent,
+    }
+}
+
 const planeBasis = (dU: Vec3D, dV: Vec3D) => {
     const u = new THREE.Vector3(...toWorld(dU)).normalize()
     const v = new THREE.Vector3(...toWorld(dV)).normalize()

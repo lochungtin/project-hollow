@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { deleteDatasetAPI, getDeviceAPI, getDiVHAPI, rehydrateDatasetAPI, rehydrateResultsAPI, triggerGuavaOpAPI, updateAlignmentAPI, updateAnchorAPI, updateTargetAPI, updateVisibilityAPI, uploadDicomAPI, uploadRTStructAPI } from './api/client'
 import { socket } from './api/websocket'
-import { AppState, Dataset, Job, ResponseDiVHSingle, ResultStore } from './types'
+import { AppState, Dataset, Job, ResponseDiVHSingle, ResultStore, SelectedContour } from './types'
 
 // the anchor point always maps to world origin (see SceneManager.setDatasetTrans); alignment
 // is where it's then placed, relative to that same world origin — so alignment IS the
@@ -31,6 +31,10 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 
 	const [localAnchorMM, setLocalAnchorMM] = useState({ 'A': [0, 0, 0], 'B': [0, 0, 0] })
 	const [localAnchorPX, setLocalAnchorPX] = useState({ 'A': [0, 0, 0], 'B': [0, 0, 0] })
+
+	// up to two contours, for defining an arbitrary slicing axis (see ViewPane's '4' key
+	// handler) — the normal is the direction between their centers of mass
+	const [selected, setSelected] = useState<SelectedContour[]>([])
 
 	const [jobs, setJobs] = useState<Job[]>([])
 	const [results, setResults] = useState<ResultStore>({'bsd': {}, 'disp': {}, 'sepd': {}, 'divh': [], 'sepdn': {}})
@@ -196,6 +200,23 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 		}
 	}, [])
 
+	// --- CONTOUR SELECTION (for arbitrary axis slicing)
+	// local-only, capped at two: toggling a third selected contour while two are already
+	// selected is a no-op (deselect one first)
+	const toggleContourSelect = useCallback((slot: string, id: string) => {
+		setSelected((prev) => {
+			const idx = prev.findIndex((s) => s.slot === slot && s.id === id)
+			if (idx !== -1) {
+				const copy = [...prev]
+				copy.splice(idx, 1)
+				return copy
+			}
+			if (prev.length >= 2)
+				return prev
+			return [...prev, { slot, id }]
+		})
+	}, [])
+
 	// --- GUAVA OPERATIONS
 	const trigger = useCallback(async (op: string) => {
 		try {
@@ -236,6 +257,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 		updateLocalAnchorMM, updateLocalAnchorPX,
 		updateAnchor, updateAlignment, localAnchorMM, localAnchorPX,
 		updateTarget,
+		selected, toggleContourSelect,
 		jobs, removeJob,
 		trigger, results,
 		getDiVH, divh
@@ -248,6 +270,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 		updateLocalAnchorMM, updateLocalAnchorPX,
 		updateAnchor, updateAlignment, localAnchorMM, localAnchorPX,
 		updateTarget,
+		selected, toggleContourSelect,
 		jobs, removeJob,
 		trigger, results,
 		getDiVH, divh

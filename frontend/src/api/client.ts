@@ -1,4 +1,4 @@
-import { Dataset, HTTPPayload, ResponseMesh, ResponseSlice, ResultStore } from "../types"
+import { Dataset, HTTPPayload, ResponseMesh, ResponseSlice, ResultStore, Vec3D } from "../types"
 
 // --- EXPOSED APIS
 // rehydrate cached data
@@ -37,8 +37,12 @@ export const updateVisibilityAPI = (slot: string, type: string, visible: boolean
 
 
 // get slice
-export const getOrthogonal = (slot: string, ax: string, idx: number): Promise<ResponseSlice> => 
+export const getOrthogonal = (slot: string, ax: string, idx: number): Promise<ResponseSlice> =>
     _get(`/api/dataset/${slot}/slice/${ax}/${idx}`)
+
+// get arbitrary-orientation slice, interpolated along `normal` through the dataset's anchor
+export const getArbitrarySlice = (slot: string, normal: Vec3D, idx: number): Promise<ResponseSlice> =>
+    _get(`/api/dataset/${slot}/slice/arbitrary/${idx}?nx=${normal[0]}&ny=${normal[1]}&nz=${normal[2]}`)
 
 // get contour mesh
 export const getContour = (slot: string, id: string): Promise<ResponseMesh> => 

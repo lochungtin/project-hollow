@@ -3,7 +3,7 @@ import numpy as np
 from fastapi import APIRouter, HTTPException, UploadFile
 
 from ..models.dataset import Dataset
-from ..models.image import orthogonal
+from ..models.image import arbitrary, orthogonal
 from ..parser import toContourObjs, toScanObj
 from ..storage import (
     clearDataset,
@@ -120,6 +120,14 @@ def update_alignment(slot: str, body: AlignmentPayload):
 
 
 # --- SLICE
+# registered before the generic /slice/{ax}/{idx} route below, since "arbitrary" would
+# otherwise also match that route's {ax} wildcard
+@router.get("/{slot}/slice/arbitrary/{idx}")
+def getArbitrarySlice(slot: str, idx: int, nx: float, ny: float, nz: float):
+    dataset = getDataset(slot)
+    return arbitrary(dataset.scan, dataset.anchor, (nx, ny, nz), idx).summary()
+
+
 @router.get("/{slot}/slice/{ax}/{idx}")
 def getOrthogonal(slot: str, ax: str, idx: int):
     dataset = getDataset(slot)

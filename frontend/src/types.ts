@@ -29,6 +29,9 @@ export type AppState = {
 
     'updateTarget': (slot: string, target: string) => Promise<void>,
 
+    'selected': SelectedContour[],
+    'toggleContourSelect': (slot: string, id: string) => void,
+
     'jobs': Job[],
     'removeJob': (job: Job) => void,
 
@@ -144,6 +147,10 @@ export type ResponseSlice = {
 }
 
 export type Axis = 'axial' | 'coronal' | 'sagittal'
+// arbitrary: a freeform plane whose normal comes from two selected contours' centers of
+// mass, not a fixed lookup like the cardinal axes — kept out of `Axis` so AXIS_DU/AXIS_DV
+// (scene/scan.ts) don't need a meaningless static entry for it
+export type SliceMode = Axis | 'arbitrary'
 
 export type VisDataset = {
     'inner': THREE.Group,
@@ -155,11 +162,13 @@ export type VisDataset = {
 }
 
 export type SliceState = {
-    'mode': Axis,
+    'mode': SliceMode,
     'idx': { [key: string]: number },
     'anchor': Vec3D,
     'normal': Vec3D,
 }
+
+export type SelectedContour = { 'slot': string, 'id': string }
 
 
 export type ResponseMesh = {

@@ -36,6 +36,12 @@ export default class SceneManager {
 
     private frameHandle = 0
 
+    // '4' key: white line marking the arbitrary-axis slicing plane's normal. Global (not
+    // per-slot) since its normal can come from contours in either/both slots; unlike the
+    // main axes it isn't tied to active-slot visibility, since it's only ever created when
+    // explicitly requested.
+    private arbitraryAxis: THREE.Line | null = null
+
     private dataset: { [key: string]: VisDataset } = {}
 
     constructor(container: HTMLElement) {
@@ -93,6 +99,8 @@ export default class SceneManager {
             if (d.axes)
                 disposeObj(d.axes)
         })
+        if (this.arbitraryAxis)
+            disposeObj(this.arbitraryAxis)
         this.renderer.dispose()
         this.renderer.domElement.remove()
     }
@@ -198,6 +206,34 @@ export default class SceneManager {
         d.axes = this.makeAxes(extent)
         d.axes.visible = slot === this.activeSlot
         this.scene.add(d.axes)
+    }
+
+    // '4' key: single white line through world origin along the arbitrary slicing plane's
+    // normal (patient-space), spanning `extent` mm total. Like the main axes it's centered
+    // on world origin, but it isn't per-slot and isn't tied to active-slot visibility.
+    setArbitraryAxis(normal: Vec3D, extent: number) {
+        this.clearArbitraryAxis()
+
+        const n = new THREE.Vector3(...toWorld(normal)).normalize()
+        const half = extent / 2
+
+        const geom = new THREE.BufferGeometry()
+        geom.setAttribute('position', new THREE.BufferAttribute(new Float32Array([
+            -n.x * half, -n.y * half, -n.z * half,
+            n.x * half, n.y * half, n.z * half,
+        ]), 3))
+
+        const mat = new THREE.LineBasicMaterial({ color: 0xffffff, toneMapped: false })
+        this.arbitraryAxis = new THREE.Line(geom, mat)
+        this.scene.add(this.arbitraryAxis)
+    }
+
+    clearArbitraryAxis() {
+        if (this.arbitraryAxis) {
+            this.scene.remove(this.arbitraryAxis)
+            disposeObj(this.arbitraryAxis)
+            this.arbitraryAxis = null
+        }
     }
 
     // --- ACTIVE SLOT

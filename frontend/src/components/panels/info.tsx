@@ -156,6 +156,7 @@ const ContentLoaded = ({ slot }: { slot: string }) => {
     const _onClickContourSelect = (e: React.MouseEvent, slot: string, id: string) => {
         console.log('_onClickContourSelect', slot, id)
         e.stopPropagation()
+        state.toggleContourSelect(slot, id)
     }
     const _onClickContourDMap = (e: React.MouseEvent, slot: string, id: string) => {
         console.log('_onClickContourDMap', slot, id)
@@ -229,6 +230,12 @@ const ContentLoaded = ({ slot }: { slot: string }) => {
                     else if (ds.targetID !== 'unknown')
                         targetDecorator = 'info-contour-action-img-unselected'
 
+                    let selectDecorator = ''
+                    if (state.selected.some(s => s.slot === slot && s.id === c.id))
+                        selectDecorator = 'info-contour-action-img-selected'
+                    else if (state.selected.length > 0)
+                        selectDecorator = 'info-contour-action-img-unselected'
+
                     return <div key={c.id} className="info-contour-item-container">
                         <button className='info-contour-item' onClick={e => _onClickContour(e, slot, c.id)}>
                             <div className={`info-contour-label ${c.visible ? 'info-contour-label-active' : ''}`}>
@@ -244,7 +251,7 @@ const ContentLoaded = ({ slot }: { slot: string }) => {
                                 <img className={`info-contour-action-img ${targetDecorator}`} src={Target} alt="T" />
                             </button>
                             <button className='info-contour-action' onClick={e => _onClickContourSelect(e, slot, c.id)}>
-                                <img className='info-contour-action-img' src={Select} alt="S" />
+                                <img className={`info-contour-action-img ${selectDecorator}`} src={Select} alt="S" />
                             </button>
                             <button className='info-contour-action' onClick={e => _onClickContourDMap(e, slot, c.id)}>
                                 <img className='info-contour-action-img' src={DMap} alt="D" />

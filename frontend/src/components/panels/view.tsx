@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react'
-import { getContour, getOrthogonal } from '../../api/client'
+import { getArbitrarySlice, getContour, getOrthogonal } from '../../api/client'
 import SceneManager from '../../scene/manager'
-import { axisFrame, render, renderBlack, sliceGeometry } from '../../scene/scan'
+import { arbitraryMaxIdx, arbitrarySliceGeometry, axisFrame, render, renderBlack, sliceGeometry } from '../../scene/scan'
 import { useAppState } from '../../state'
-import { Axis, SliceState, Vec3D } from '../../types'
+import { Axis, Scan, SliceState, Vec3D } from '../../types'
 import './view.css'
 
 
@@ -25,6 +25,11 @@ const getMaxIdx = (shape: Vec3D, ax: string) => {
     if (ax === 'coronal')
         return shape[1] - 1
     return shape[2] - 1
+}
+
+const normalizeVec = (v: Vec3D): Vec3D => {
+    const len = Math.sqrt(v[0] ** 2 + v[1] ** 2 + v[2] ** 2)
+    return len < 1e-6 ? [0, 0, 1] : [v[0] / len, v[1] / len, v[2] / len]
 }
 
 
@@ -73,12 +78,23 @@ const ViewPane = () => {
         const idx = slice.idx[slice.mode]
         const token = ++refOpToken.current[slot]
 
+        // arbitrary has no natural voxel-grid bound like the cardinal axes (shape[axis]-1,
+        // starting at 0) — it's centered on the anchor, so the valid range is symmetric
+        // around 0 instead, sized to the same bounding-box-diagonal bound used to size the
+        // rendered image itself (see scene/scan.ts::arbitraryMaxIdx)
+        const isArbitrary = slice.mode === 'arbitrary'
+        const minIdx = isArbitrary ? -arbitraryMaxIdx(ds.scan) : 0
+        const maxIdx = isArbitrary ? arbitraryMaxIdx(ds.scan) : getMaxIdx(ds.scan.shape, slice.mode)
+
         try {
             // index out of this dataset's own range (e.g. mismatched anchors/slice counts
             // between A and B) -> render a black placeholder in the slice's would-be position
             // instead of hitting the backend (which clamps and would return a real slice)
-            if (idx < 0 || idx > getMaxIdx(ds.scan.shape, slice.mode)) {
-                const mesh = renderBlack(sliceGeometry(ds.scan, slice.mode, idx))
+            if (idx < minIdx || idx > maxIdx) {
+                const geometry = slice.mode === 'arbitrary'
+                    ? arbitrarySliceGeometry(ds.scan, ds.anchor, slice.normal, idx)
+                    : sliceGeometry(ds.scan, slice.mode, idx)
+                const mesh = renderBlack(geometry)
                 if (refOpToken.current[slot] !== token)
                     return
 
@@ -87,7 +103,9 @@ const ViewPane = () => {
                 return
             }
 
-            const res = await getOrthogonal(slot, slice.mode, idx)
+            const res = slice.mode === 'arbitrary'
+                ? await getArbitrarySlice(slot, slice.normal, idx)
+                : await getOrthogonal(slot, slice.mode, idx)
             if (refOpToken.current[slot] !== token)
                 return
 
@@ -175,6 +193,9 @@ const ViewPane = () => {
                     return
 
                 const mode = refSlice.current[refActiveSlot.current].mode
+                if (mode === 'arbitrary')
+                    return
+
                 const { normal, up } = axisFrame(mode)
                 refScene.current?.setOrthogonalView(normal, up)
                 return
@@ -235,9 +256,44 @@ const ViewPane = () => {
                 return
             }
 
-            // switch to arbitrary axis
+            // arbitrary axis slicing — only activates with exactly two contours selected
+            // (see info.tsx's select button / state.selected). The normal is the direction
+            // between their centers of mass; the plane passes through each slot's own anchor
+            // (the point that maps to world origin), matching how the cardinal axes are also
+            // computed per-slot but share one normal/mode across both loaded slots.
             if (e.key === '4') {
-                console.log(`Axis change: ${e.key}`)
+                const sel = refState.current.selected
+                if (sel.length !== 2)
+                    return
+
+                const comA = refState.current.dataset[sel[0].slot]?.contours[sel[0].id]?.center_of_mass
+                const comB = refState.current.dataset[sel[1].slot]?.contours[sel[1].id]?.center_of_mass
+                if (!comA || !comB)
+                    return
+
+                const normal = normalizeVec([comB[0] - comA[0], comB[1] - comA[1], comB[2] - comA[2]])
+
+                const loadedSlots = ['A', 'B'].filter(s => refState.current.dataset[s])
+                if (loadedSlots.length === 0)
+                    return
+
+                // size the visual axis line to whichever loaded dataset is active (falling
+                // back to the other) — same bounding-box-diagonal extent the arbitrary slice
+                // itself is sized to (see scene/scan.ts::arbitrarySliceGeometry)
+                const refSlot = loadedSlots.includes(refActiveSlot.current) ? refActiveSlot.current : loadedSlots[0]
+                const refDs = refState.current.dataset[refSlot]
+                if (!refDs)
+                    return
+                const { width: extent } = arbitrarySliceGeometry(refDs.scan, refDs.anchor, normal, 0)
+                refScene.current?.setArbitraryAxis(normal, extent)
+
+                loadedSlots.forEach(s => {
+                    const sState = refSlice.current[s]
+                    sState.mode = 'arbitrary'
+                    sState.normal = normal
+                    sState.idx['arbitrary'] = 0
+                    refreshSlice(s)
+                })
                 return
             }
 
