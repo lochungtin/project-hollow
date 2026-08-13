@@ -21,9 +21,11 @@ const Toolbar = () => {
                 <span className='toolbar-hints mono'>
                     [Tab] dataset &middot;
                     [1/2/3/4] change axis &middot;
-                    [R] toggle rotation &middot;
-                    [Scroll] slice/rotate &middot;
-                    [Ctrl + Scroll] zoom
+                    [Scroll] slice &middot;
+                    [Space + Scroll] rotate &middot;
+                    [Ctrl + Scroll] zoom &middot;
+                    [Enter] flat view &middot;
+                    [O] reset camera
                 </span>
             </div>
         </header>

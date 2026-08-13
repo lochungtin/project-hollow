@@ -29,7 +29,9 @@ class Dataset:
         z, y, x = self.scan.shape
         sZ, sY, sX = self.scan.spacing
         oX, oY, oZ = self.scan.origin
-        self.anchor = np.asarray([oX + (x * sX), oY + (y * sY), oZ + (z * sZ)]) // 2
+        self.anchor = np.asarray(
+            [oX + (x - 1) * sX / 2, oY + (y - 1) * sY / 2, oZ + (z - 1) * sZ / 2]
+        )
 
     def summary(self):
         return {

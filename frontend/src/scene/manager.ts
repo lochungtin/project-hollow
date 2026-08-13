@@ -9,8 +9,26 @@ export default class SceneManager {
     private camera
     private cameraTarget = new THREE.Vector3(0, 0, 0)
     private cameraDistance = 400
-    private cameraYaw = Math.PI / 4
-    private cameraPitch = Math.PI / 6
+    // unit vector from target to camera; orbiting rotates this (and cameraUp) about an
+    // arbitrary axis (see rotateCamera) instead of being restricted to yaw/pitch about the
+    // world Y/X axes
+    private cameraOffset = new THREE.Vector3(
+        Math.cos(Math.PI / 6) * Math.sin(Math.PI / 4),
+        Math.sin(Math.PI / 6),
+        Math.cos(Math.PI / 6) * Math.cos(Math.PI / 4),
+    ).normalize()
+    // rotated in lockstep with cameraOffset so the camera doesn't roll/flip when orbiting
+    // about axes other than world Y (lookAt() alone assumes a fixed up and only behaves
+    // predictably for rotation about that same axis)
+    private cameraUp = new THREE.Vector3(0, 1, 0)
+
+    // snapshot of the camera's state as originally framed — restored by resetCamera()
+    // (target/distance are re-captured each time a dataset is freshly framed via setCamera;
+    // offset/up are the fixed initial viewing angle and never change after construction)
+    private defaultTarget = this.cameraTarget.clone()
+    private defaultDistance = this.cameraDistance
+    private defaultOffset = this.cameraOffset.clone()
+    private defaultUp = this.cameraUp.clone()
 
     private renderer
     private resizeObserver
@@ -50,7 +68,7 @@ export default class SceneManager {
         this.animate = this.animate.bind(this)
         this.frameHandle = requestAnimationFrame(this.animate)
 
-        ;['A', 'B'].forEach(slot => {this.dataset[slot] = this.makeDataset()})
+        ;['A', 'B'].forEach(slot => {this.dataset[slot] = this.makeDataset(slot)})
     }
 
     resize() {
@@ -69,7 +87,11 @@ export default class SceneManager {
     dispose() {
         cancelAnimationFrame(this.frameHandle)
         this.resizeObserver.disconnect()
-        Object.values(this.dataset).forEach((d) => disposeObj(d.outer))
+        Object.values(this.dataset).forEach((d) => {
+            disposeObj(d.outer)
+            if (d.axes)
+                disposeObj(d.axes)
+        })
         this.renderer.dispose()
         this.renderer.domElement.remove()
     }
@@ -79,30 +101,74 @@ export default class SceneManager {
         const c = toWorld(center)
         this.cameraTarget.set(c[0], c[1], c[2])
         this.cameraDistance = THREE.MathUtils.clamp(radius * 2.6, 50, 5000)
+
+        this.defaultTarget.copy(this.cameraTarget)
+        this.defaultDistance = this.cameraDistance
+
         this.updateCamera()
     }
 
     private updateCamera() {
-        const x = this.cameraTarget.x + this.cameraDistance * Math.cos(this.cameraPitch) * Math.sin(this.cameraYaw)
-        const y = this.cameraTarget.y + this.cameraDistance * Math.sin(this.cameraPitch)
-        const z = this.cameraTarget.z + this.cameraDistance * Math.cos(this.cameraPitch) * Math.cos(this.cameraYaw)
-        this.camera.position.set(x, y, z)
+        const pos = this.cameraTarget.clone().addScaledVector(this.cameraOffset, this.cameraDistance)
+        this.camera.position.copy(pos)
+        this.camera.up.copy(this.cameraUp)
         this.camera.lookAt(this.cameraTarget)
     }
 
+    // ctrl/cmd + scroll: sign < 0 (scroll up) zooms in, sign > 0 (scroll down) zooms out
+    zoomCamera(sign: number) {
+        const factor = sign > 0 ? 1.1 : 1 / 1.1
+        this.cameraDistance = THREE.MathUtils.clamp(this.cameraDistance * factor, 20, 10000)
+        this.updateCamera()
+    }
+
+    // space + scroll: orbit the camera about `axis` (a patient-space direction, e.g. the
+    // current slice's normal). `angle` is a right-hand-rule rotation about `axis`: viewed
+    // from the tip of `axis` looking back at the target (i.e. looking into the screen along
+    // -axis, matching how the corresponding slice is actually viewed), a negative angle
+    // reads as clockwise and a positive angle as anticlockwise.
+    rotateCamera(axis: Vec3D, angle: number) {
+        const worldAxis = new THREE.Vector3(...toWorld(axis)).normalize()
+        this.cameraOffset.applyAxisAngle(worldAxis, angle)
+        this.cameraUp.applyAxisAngle(worldAxis, angle)
+        this.updateCamera()
+    }
+
+    // enter key: snap the camera to look straight down `normal` (world-space, pointing from
+    // the slice plane toward the camera, i.e. the viewing direction ends up perpendicular to
+    // the plane) with `up` as the screen's vertical — a flat, face-on 2D view of the slice.
+    // Distance is left untouched so the current zoom level is preserved.
+    setOrthogonalView(normal: THREE.Vector3, up: THREE.Vector3) {
+        this.cameraOffset.copy(normal).normalize()
+        this.cameraUp.copy(up).normalize()
+        this.updateCamera()
+    }
+
+    // 'o' key: restore the camera to how it was framed when the dataset first loaded,
+    // undoing any zoom/orbit made since.
+    resetCamera() {
+        this.cameraTarget.copy(this.defaultTarget)
+        this.cameraDistance = this.defaultDistance
+        this.cameraOffset.copy(this.defaultOffset)
+        this.cameraUp.copy(this.defaultUp)
+        this.updateCamera()
+    }
+
     // --- AXES
-    private makeAxes(origin: Vec3D, extent: Vec3D): THREE.LineSegments {
-        const [oX, oY, oZ] = toWorld(origin)
+    // Cross centered on (0, 0, 0) — each line spans the dataset's full extent along its
+    // own axis, meeting at world origin (where the scan's own center sits right after
+    // load, before any anchor edit — see setDatasetTrans).
+    private makeAxes(extent: Vec3D): THREE.LineSegments {
         const [eX, eY, eZ] = toWorld(extent)
 
         const shX = eX / 2
-        const shY = eY/ 2
+        const shY = eY / 2
         const shZ = eZ / 2
 
         const positions = new Float32Array([
-            oX, oY + shY, oZ + shZ,   oX + eX, oY + shY, oZ + shZ,   // X axis
-            oX + shX, oY, oZ + shZ,   oX + shX, oY + eY, oZ + shZ,   // Y axis
-            oX + shX, oY + shY, oZ,   oX + shX, oY + shY, oZ + eZ,   // Z axis
+            -shX, 0, 0,   shX, 0, 0,   // X axis
+            0, -shY, 0,   0, shY, 0,   // Y axis
+            0, 0, -shZ,   0, 0, shZ,   // Z axis
         ])
 
         const colors = new Float32Array([
@@ -119,20 +185,37 @@ export default class SceneManager {
         return new THREE.LineSegments(geom, mat)
     }
 
-    setAxes(slot: string, origin: Vec3D, extent: Vec3D) {
+    // Axes are anchored to world origin and live directly on the scene, outside the
+    // per-slot inner/outer transform chain, so they never move when a dataset's anchor
+    // (or alignment offset) changes — only the scan content should translate.
+    setAxes(slot: string, extent: Vec3D) {
         const d = this.dataset[slot]
         if (d.axes) {
-            d.inner.remove(d.axes)
+            this.scene.remove(d.axes)
             disposeObj(d.axes)
         }
-        d.axes = this.makeAxes(origin, extent)
-        d.inner.add(d.axes)
+        d.axes = this.makeAxes(extent)
+        d.axes.visible = slot === this.activeSlot
+        this.scene.add(d.axes)
+    }
+
+    // --- ACTIVE SLOT
+    private activeSlot = 'A'
+
+    setActiveSlot(slot: string) {
+        this.activeSlot = slot
+        Object.entries(this.dataset).forEach(([s, d]) => {
+            d.outer.visible = s === slot
+            if (d.axes)
+                d.axes.visible = s === slot
+        })
     }
 
     // --- DATASET
-    private makeDataset(): VisDataset {
+    private makeDataset(slot: string): VisDataset {
         const inner = new THREE.Group()
         const outer = new THREE.Group()
+        outer.visible = slot === this.activeSlot
 
         outer.add(inner)
         this.scene.add(outer)
@@ -144,9 +227,18 @@ export default class SceneManager {
         const d = this.dataset[slot]
         disposeObj(d.outer)
         this.scene.remove(d.outer)
-        this.dataset[slot] = this.makeDataset()
+        if (d.axes) {
+            this.scene.remove(d.axes)
+            disposeObj(d.axes)
+        }
+        this.dataset[slot] = this.makeDataset(slot)
     }
 
+    // Content is shifted by -anchor so the anchor point sits at the outer group's local
+    // origin (this is also what lets `rotation` pivot around the anchor rather than world
+    // origin), then the whole group is placed at `offset` in world space. The anchor's
+    // own world position is intentionally NOT re-added here — that's what makes the scan
+    // translate as the anchor changes, while the (scene-level, always-origin) axes stay put.
     setDatasetTrans(slot: string, anchor: Vec3D, offset: Vec3D, rotation: Vec3D) {
         const d = this.dataset[slot]
         const a = toWorld(anchor)
@@ -154,7 +246,7 @@ export default class SceneManager {
 
         d.anchor = a
         d.inner.position.set(-a[0], -a[1], -a[2])
-        d.outer.position.set(a[0] + o[0], a[1] + o[1], a[2] + o[2])
+        d.outer.position.set(o[0], o[1], o[2])
         // NOTE: rotation is still an inert passthrough (not wired up yet).
         // Euler angles can't be remapped by the same per-component swap as a
         // position — they'll need proper conjugation by this rotation once

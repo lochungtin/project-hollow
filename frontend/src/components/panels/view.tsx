@@ -1,8 +1,7 @@
 import { useEffect, useRef } from 'react'
-import * as THREE from 'three'
 import { getOrthogonal } from '../../api/client'
 import SceneManager from '../../scene/manager'
-import { render } from '../../scene/scan'
+import { axisFrame, render, renderBlack, sliceGeometry } from '../../scene/scan'
 import { useAppState } from '../../state'
 import { Axis, SliceState, Vec3D } from '../../types'
 import './view.css'
@@ -10,6 +9,7 @@ import './view.css'
 
 const AXIS_NUM_MAP: { [key: string]: Axis } = {'1': 'axial', '2': 'coronal', '3': 'sagittal'}
 const AXIS_NORM_MAP: { [key: string]: Vec3D } = {'1': [0, 0, 1], '2': [0, 1, 0], '3': [1, 0, 0]}
+const ROTATE_STEP = Math.PI / 180 // 1 degree per wheel tick
 
 const sliceState = (anchor: Vec3D): SliceState => ({
     'mode': 'axial',
@@ -52,13 +52,14 @@ const ViewPane = () => {
             return
 
         const scene = new SceneManager(refContainer.current)
+        scene.setActiveSlot(refActiveSlot.current)
         refScene.current = scene
 
         return () => {
             scene.dispose()
             refScene.current = null
         }
-    })
+    }, [])
 
     const refreshSlice = async(slot: string): Promise<void> => {
         const scene = refScene.current
@@ -68,17 +69,30 @@ const ViewPane = () => {
             return
 
         const slice = refSlice.current[slot]
+        const idx = slice.idx[slice.mode]
         const token = ++refOpToken.current[slot]
 
         try {
-            const res = await getOrthogonal(slot, slice.mode, slice.idx[slice.mode])
+            // index out of this dataset's own range (e.g. mismatched anchors/slice counts
+            // between A and B) -> render a black placeholder in the slice's would-be position
+            // instead of hitting the backend (which clamps and would return a real slice)
+            if (idx < 0 || idx > getMaxIdx(ds.scan.shape, slice.mode)) {
+                const mesh = renderBlack(sliceGeometry(ds.scan, slice.mode, idx))
+                if (refOpToken.current[slot] !== token)
+                    return
+
+                scene.setSlice(slot, 'primary', mesh)
+                return
+            }
+
+            const res = await getOrthogonal(slot, slice.mode, idx)
             if (refOpToken.current[slot] !== token)
                 return
 
             const mesh = await render(res)
             if (refOpToken.current[slot] !== token)
                 return
-            
+
             scene.setSlice(slot, 'primary', mesh)
             console.log('Frame Update')
         }
@@ -98,30 +112,40 @@ const ViewPane = () => {
 
             const slot = refActiveSlot.current
             const dataset = refState.current.dataset[slot]
-            
+
             if (!dataset)
                 return
 
             const slice = refSlice.current[slot]
             const sign = Math.sign(e.deltaY) || 1
 
-            // zooming
+            // zooming — scroll up (sign < 0) zooms in, scroll down (sign > 0) zooms out
             if (e.ctrlKey || e.metaKey) {
-                console.log(`[CTRL] Modified Scrolling:  ${sign}`)
+                scene.zoomCamera(sign)
                 return
             }
 
-            // rotating
+            // rotating — orbit the camera about the axis normal to the active slot's current
+            // view (axial -> SI, coronal -> AP, sagittal -> LR). Scroll up (sign < 0) rotates
+            // clockwise, scroll down (sign > 0) rotates anticlockwise.
             if (spaceHeld.current) {
-                console.log(`[SPACE] Modified Scrolling:  ${sign}`)
+                scene.rotateCamera(slice.normal, sign * ROTATE_STEP)
                 return
             }
-            
-            // slice scrolling
-            const mx = getMaxIdx(dataset.scan.shape, slice.mode)
-            slice.idx[slice.mode] = THREE.MathUtils.clamp(slice.idx[slice.mode] + sign, 0, mx)
-            
-            refreshSlice(slot)
+
+            // slice scrolling — advance every loaded dataset's index together (for the
+            // active axis) so indices stay in lockstep between A and B regardless of which
+            // is currently visible. Each dataset's own bounds are enforced at render time
+            // (see refreshSlice) rather than here, since clamping per-dataset here would
+            // desync the two once one runs out of slices before the other.
+            const mode = slice.mode
+            const loadedSlots = ['A', 'B'].filter(s => refState.current.dataset[s])
+            loadedSlots.forEach(s => {
+                const sState = refSlice.current[s]
+                sState.mode = mode
+                sState.idx[mode] += sign
+                refreshSlice(s)
+            })
             console.log(`Normal Scrolling ${sign}`)
         }
 
@@ -133,26 +157,52 @@ const ViewPane = () => {
                 return
             }
 
+            // reset camera to how it was framed on load
+            if (e.key === 'o' || e.key === 'O') {
+                refScene.current?.resetCamera()
+                return
+            }
+
+            // snap camera to a flat, face-on view of the active slot's current slice plane.
+            // Guarded against focused text inputs (e.g. the anchor fields) since Enter is
+            // also how those get submitted.
+            if (e.key === 'Enter') {
+                const tag = (document.activeElement as HTMLElement | null)?.tagName
+                if (tag === 'INPUT' || tag === 'TEXTAREA')
+                    return
+
+                const mode = refSlice.current[refActiveSlot.current].mode
+                const { normal, up } = axisFrame(mode)
+                refScene.current?.setOrthogonalView(normal, up)
+                return
+            }
+
             // toggle active slot
             if (e.key === 'Tab') {
                 e.preventDefault()
                 const newSlot = refState.current.activeSlot === 'A' ? 'B' : 'A'
                 console.log(`Change active slot to ${newSlot}`)
                 refState.current.setActiveSlot(newSlot)
+                refreshSlice(newSlot)
                 return
             }
 
-            const slot = refActiveSlot.current
-            const slice = refSlice.current[slot]
-            
-            // toggle cardinal axis
+            // toggle cardinal axis — applied to every loaded dataset (not just the active
+            // one) so their slice indices stay comparable across slots, matching the wheel
+            // scrolling behaviour above
             if (e.key === '1' || e.key === '2' || e.key === '3') {
                 console.log(`Axis change: ${e.key}`)
 
-                slice.normal = AXIS_NORM_MAP[e.key]
-                slice.anchor = refState.current.dataset[slot]?.anchor ?? [0, 0, 0]
-                slice.mode = AXIS_NUM_MAP[e.key]
-                refreshSlice(slot)
+                const mode = AXIS_NUM_MAP[e.key]
+                const normal = AXIS_NORM_MAP[e.key]
+                const loadedSlots = ['A', 'B'].filter(s => refState.current.dataset[s])
+                loadedSlots.forEach(s => {
+                    const sState = refSlice.current[s]
+                    sState.normal = normal
+                    sState.anchor = refState.current.dataset[s]?.anchor ?? [0, 0, 0]
+                    sState.mode = mode
+                    refreshSlice(s)
+                })
                 return
             }
 
@@ -182,6 +232,10 @@ const ViewPane = () => {
     }, [])
 
     useEffect(() => {
+        refScene.current?.setActiveSlot(state.activeSlot)
+    }, [state.activeSlot])
+
+    useEffect(() => {
         const scene = refScene.current
         if (!scene)
             return
@@ -204,7 +258,6 @@ const ViewPane = () => {
                 refSlice.current[slot] = sliceState(dataset.anchor)
 
                 const [z, y, x] = dataset.scan.shape
-                const [oZ, oY, oX] = dataset.scan.origin
                 const [sZ, sY, sX] = dataset.scan.spacing
 
                 refSlice.current[slot].idx = {
@@ -213,15 +266,18 @@ const ViewPane = () => {
                     'sagittal': Math.floor((x - 1) / 2),
                 }
 
-                scene.setCamera(dataset.anchor, Math.max(x * sX, y * sY, z * sZ) / 1.5  )
+                // the anchor point always maps to world origin (see setDatasetTrans), which
+                // is also where the axes are centered — so the camera should target origin,
+                // not the dataset's raw (absolute patient-space) anchor coordinate
+                scene.setCamera([0, 0, 0], Math.max(x * sX, y * sY, z * sZ) / 2)
 
-                scene.setAxes(slot, dataset.scan.origin, [
+                scene.setAxes(slot, [
                     (x - 1) * sX,
                     (y - 1) * sY,
                     (z - 1) * sZ,
                 ])
 
-                // refreshSlice(slot)
+                refreshSlice(slot)
             }
         })
     }, [

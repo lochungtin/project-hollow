@@ -52,7 +52,7 @@ def orthogonal(scan, ax, idx):
         "sagittal": (idxX, cY, cZ),
     }[ax]
     dU = {"axial": (1, 0, 0), "coronal": (1, 0, 0), "sagittal": (0, 1, 0)}[ax]
-    dV = {"axial": (0, 1, 0), "coronal": (0, 0, 1), "sagittal": (0, 0, 1)}[ax]
+    dV = {"axial": (0, -1, 0), "coronal": (0, 0, -1), "sagittal": (0, 0, -1)}[ax]
 
     if ax == "axial":
         img = scan.array[idx, :, :]
