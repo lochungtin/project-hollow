@@ -1,4 +1,4 @@
-import { Dataset, HTTPPayload, ResponseSlice, ResultStore } from "../types"
+import { Dataset, HTTPPayload, ResponseMesh, ResponseSlice, ResultStore } from "../types"
 
 // --- EXPOSED APIS
 // rehydrate cached data
@@ -6,8 +6,10 @@ export const rehydrateDatasetAPI = (): Promise<{"A": Dataset | null, "B": Datase
 
 export const rehydrateResultsAPI = (): Promise<ResultStore> => _get('api/guava/results')
 
+
 // get computation device
 export const getDeviceAPI = (): Promise<string> => _get('api/guava/device')
+
 
 // dicom dataset handling
 export const uploadDicomAPI = (slot: string, files: FileList | File[]): Promise<Dataset> => {
@@ -24,6 +26,7 @@ export const uploadRTStructAPI = (slot: string, file: File): Promise<Dataset> =>
 
 export const deleteDatasetAPI = (slot: string) => _del(`api/dataset/${slot}`)
 
+
 // render handling
 export const updateVisibilityAPI = (slot: string, type: string, visible: boolean, id?: string) => {
     const payload = {"visibility": visible}
@@ -32,9 +35,19 @@ export const updateVisibilityAPI = (slot: string, type: string, visible: boolean
     return _put(`/api/dataset/${slot}/${type}/visibility`, payload)
 }
 
+
 // get slice
 export const getOrthogonal = (slot: string, ax: string, idx: number): Promise<ResponseSlice> => 
     _get(`/api/dataset/${slot}/slice/${ax}/${idx}`)
+
+// get contour mesh
+export const getContour = (slot: string, id: string): Promise<ResponseMesh> => 
+    _get(`/api/dataset/${slot}/contour/${id}`)
+
+// get contour nearside surface
+export const getNearside = (slot: string, id: string): Promise<ResponseMesh> => 
+    _get(`/api/dataset/${slot}/nearside/${id}`)
+
 
 // target and anchor handling
 export const updateAnchorAPI = (slot: string, anchor: number[], id: string): Promise<Dataset> => {
@@ -47,9 +60,9 @@ export const updateTargetAPI = (slot: string, target: string): Promise<Dataset> 
     return _put(`/api/dataset/${slot}/target`, payload)
 }
 
+
 // guava operation triggers
 export const triggerGuavaOpAPI = (op: string) => _get(`api/guava/queue/${op}`)
-
 
 export const getDiVHAPI = (roi: string) => _get(`api/guava/results/divh/${roi}`)
 

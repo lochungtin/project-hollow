@@ -1,6 +1,7 @@
 import * as THREE from 'three'
-import { Vec3D, VisDataset } from '../types'
+import { ResponseMesh, Vec3D, VisDataset } from '../types'
 import { toWorld } from './coords'
+import { renderFull, renderPartial } from './mesh'
 
 export default class SceneManager {
     private container
@@ -277,7 +278,54 @@ export default class SceneManager {
         })
         d.slices = {}
     }
+
+    setScanVisibility(slot: string, visible: boolean) {
+        const d = this.dataset[slot]
+        Object.values(d.slices).forEach(obj => { obj.visible = visible })
+    }
+
+    // --- CONTOUR / SURFACE
+    renderContour(
+        slot: string,
+        id: string,
+        mesh: ResponseMesh,
+        color: [number, number, number],
+        opacity: number,
+        visible: boolean,
+        partial: boolean,
+    ) {
+        const d = this.dataset[slot]
+        this.removeContour(slot, id)
+
+        const renderer = partial ? renderPartial : renderFull
+        const obj = renderer(mesh, color, opacity)
+        obj.visible = visible
+        d.inner.add(obj)
+        d.outs[id] = obj
+    }
+
+    removeContour(slot: string, id: string) {
+        const d = this.dataset[slot]
+        const obj = d.outs[id]
+        if (!d || !obj)
+            return
+        d.inner.remove(obj)
+        disposeObj(obj)
+        delete d.outs[id]
+    }
+
+    rendered(slot: string, id: string) {
+        return id in this.dataset[slot].outs
+    }
+
+    setContourVisibility(slot: string, id: string, visible: boolean) {
+        const obj = this.dataset[slot].outs[id]
+        if (obj)
+            obj.visible = visible
+    }
 }
+
+
 
 const disposeObj = (obj: THREE.Object3D) => {
     obj.traverse((child) => {

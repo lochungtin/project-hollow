@@ -68,7 +68,7 @@ export type Contour = {
     'id': string,
     'name': string,
     'number': string,
-    'color': number[]
+    'color': Vec3D
     'visible': boolean,
     'has_mesh': boolean,
     'volume': number,
@@ -133,8 +133,6 @@ export type ResponseSepDN = {
 }
 
 
-
-
 export type ResponseSlice = {
     'url': string,
     'center': Vec3D,
@@ -160,4 +158,21 @@ export type SliceState = {
     'idx': { [key: string]: number },
     'anchor': Vec3D,
     'normal': Vec3D,
+}
+
+
+export type ResponseMesh = {
+    'id': string,
+    'name': string,
+    'number': string,
+    'color': number[]
+    'visible': boolean,
+    'has_mesh': boolean,
+    'volume': number,
+    'surface_area': number,
+    'center_of_mass': Vec3D,
+    'vertices': number[],
+    'faces': number[],
+    'vertex_count': number,
+    'face_count': number,
 }

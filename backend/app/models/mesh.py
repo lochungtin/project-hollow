@@ -34,7 +34,7 @@ class Mesh:
 
         return Mesh(vertices=mm.astype(np.float32), faces=faces.astype(np.int32))
 
-    def json(self):
+    def summary(self):
         return {
             "vertices": self.vertices.astype(np.float32).flatten().tolist(),
             "faces": self.faces.astype(np.int32).flatten().tolist(),

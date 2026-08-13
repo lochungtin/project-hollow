@@ -70,12 +70,6 @@ async def delete_dataset(slot: str):
     return {"ok": True}
 
 
-@router.get("/{slot}/slice/{ax}/{idx}")
-def getOrthogonal(slot: str, ax: str, idx: int):
-    dataset = getDataset(slot)
-    return orthogonal(dataset.scan, ax, idx).summary()
-
-
 # --- VISIBILITY
 @router.put("/{slot}/scan/visibility")
 def update_scan_visibility(slot: str, body: VisibilityPayload):
@@ -106,3 +100,26 @@ def update_scan_visibility(slot: str, body: AnchorPayload):
     dataset.anchorID = body.id
     dataset.anchor = np.asarray([body.x, body.y, body.z]).astype(int)
     return dataset.summary()
+
+
+# --- SLICE
+@router.get("/{slot}/slice/{ax}/{idx}")
+def getOrthogonal(slot: str, ax: str, idx: int):
+    dataset = getDataset(slot)
+    return orthogonal(dataset.scan, ax, idx).summary()
+
+
+# --- CONTOUR
+@router.get("/{slot}/contour/{id}")
+def getContour(slot: str, id: str):
+    dataset = getDataset(slot)
+    if id not in dataset.contours:
+        raise HTTPException(404, f"Error: no contour with id: {id} found")
+
+    contour = dataset.contours[id]
+    return {**contour.summary(), **contour.mesh.summary()}
+
+
+@router.get("/{slot}/nearside/{id}")
+def getNearside(slot: str, id: str):
+    return

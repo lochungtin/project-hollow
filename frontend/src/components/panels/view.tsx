@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { getOrthogonal } from '../../api/client'
+import { getContour, getOrthogonal } from '../../api/client'
 import SceneManager from '../../scene/manager'
 import { axisFrame, render, renderBlack, sliceGeometry } from '../../scene/scan'
 import { useAppState } from '../../state'
@@ -81,6 +81,7 @@ const ViewPane = () => {
                 if (refOpToken.current[slot] !== token)
                     return
 
+                mesh.visible = ds.scan.visible
                 scene.setSlice(slot, 'primary', mesh)
                 return
             }
@@ -93,6 +94,7 @@ const ViewPane = () => {
             if (refOpToken.current[slot] !== token)
                 return
 
+            mesh.visible = ds.scan.visible
             scene.setSlice(slot, 'primary', mesh)
             console.log('Frame Update')
         }
@@ -252,6 +254,7 @@ const ViewPane = () => {
                 return
             }
             scene.setDatasetTrans(slot, dataset.anchor, dataset.alignment, dataset.render.rotation)
+            scene.setScanVisibility(slot, dataset.scan.visible)
 
             if (refScanID.current[slot] !== dataset.scan.id) {
                 refScanID.current[slot] = dataset.scan.id
@@ -283,6 +286,8 @@ const ViewPane = () => {
     }, [
         state.dataset['A']?.scan.id,
         state.dataset['B']?.scan.id,
+        state.dataset['A']?.scan.visible,
+        state.dataset['B']?.scan.visible,
         JSON.stringify(state.dataset['A']?.render.rotation),
         JSON.stringify(state.dataset['B']?.render.rotation),
         JSON.stringify(state.dataset['A']?.anchor),
@@ -290,6 +295,34 @@ const ViewPane = () => {
         JSON.stringify(state.dataset['A']?.alignment),
         JSON.stringify(state.dataset['B']?.alignment),
     ])
+
+    useEffect(() => {
+        const scene = refScene.current
+        if (!scene)
+            return
+
+        ;['A', 'B'].forEach(slot => {
+            const dataset = state.dataset[slot]
+            const contours = Object.values(dataset?.contours ?? {})
+            const liveIDs = new Set(contours.map(contour => contour.id))
+            
+            contours.forEach(contour => {
+                if (!scene.rendered(slot, contour.id)) {
+                    getContour(slot, contour.id).then(mesh => {
+                        scene.renderContour(slot, contour.id, mesh, contour.color, 0.7, mesh.visible, false)
+                    }).catch(err => console.error(`Failed to render contour ${contour.id}`, err))
+                } else {
+                    scene.setContourVisibility(slot, contour.id, contour.visible)
+                }
+            })
+
+            if (dataset) {
+                const rm: string[] = []
+                contours.forEach(contour => {if (!liveIDs.has(contour.id)) rm.push(contour.id)})
+                rm.forEach((id) => scene.removeContour(slot, id))
+            }
+        })
+    }, [JSON.stringify(state.dataset['A']?.contours), JSON.stringify(state.dataset['B']?.contours)])
 
 
     return (
