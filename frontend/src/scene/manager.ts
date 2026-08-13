@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { Vec3D, VisDataset } from '../types'
+import { toWorld } from './coords'
 
 export default class SceneManager {
     private container
@@ -75,8 +76,8 @@ export default class SceneManager {
     
     // --- CAMERA
     setCamera(center: Vec3D, radius: number) {
-        console.log('go')
-        this.cameraTarget.set(center[0], center[1], center[2])
+        const c = toWorld(center)
+        this.cameraTarget.set(c[0], c[1], c[2])
         this.cameraDistance = THREE.MathUtils.clamp(radius * 2.6, 50, 5000)
         this.updateCamera()
     }
@@ -89,6 +90,45 @@ export default class SceneManager {
         this.camera.lookAt(this.cameraTarget)
     }
 
+    // --- AXES
+    private makeAxes(origin: Vec3D, extent: Vec3D): THREE.LineSegments {
+        const [oX, oY, oZ] = toWorld(origin)
+        const [eX, eY, eZ] = toWorld(extent)
+
+        const shX = eX / 2
+        const shY = eY/ 2
+        const shZ = eZ / 2
+
+        const positions = new Float32Array([
+            oX, oY + shY, oZ + shZ,   oX + eX, oY + shY, oZ + shZ,   // X axis
+            oX + shX, oY, oZ + shZ,   oX + shX, oY + eY, oZ + shZ,   // Y axis
+            oX + shX, oY + shY, oZ,   oX + shX, oY + shY, oZ + eZ,   // Z axis
+        ])
+
+        const colors = new Float32Array([
+            1, 0, 0,  1, 0, 0,   // red
+            0, 1, 0,  0, 1, 0,   // green
+            0, 0, 1,  0, 0, 1,   // blue
+        ])
+
+        const geom = new THREE.BufferGeometry()
+        geom.setAttribute('position', new THREE.BufferAttribute(positions, 3))
+        geom.setAttribute('color', new THREE.BufferAttribute(colors, 3))
+
+        const mat = new THREE.LineBasicMaterial({ vertexColors: true, toneMapped: false })
+        return new THREE.LineSegments(geom, mat)
+    }
+
+    setAxes(slot: string, origin: Vec3D, extent: Vec3D) {
+        const d = this.dataset[slot]
+        if (d.axes) {
+            d.inner.remove(d.axes)
+            disposeObj(d.axes)
+        }
+        d.axes = this.makeAxes(origin, extent)
+        d.inner.add(d.axes)
+    }
+
     // --- DATASET
     private makeDataset(): VisDataset {
         const inner = new THREE.Group()
@@ -97,7 +137,7 @@ export default class SceneManager {
         outer.add(inner)
         this.scene.add(outer)
 
-        return { inner, outer, anchor:[0, 0, 0], outs: {}, slices: {} }
+        return { inner, outer, 'anchor':[0, 0, 0], 'outs': {}, 'slices': {}, 'axes': null }
     }
 
     removeDataset(slot: string) {
@@ -108,11 +148,17 @@ export default class SceneManager {
     }
 
     setDatasetTrans(slot: string, anchor: Vec3D, offset: Vec3D, rotation: Vec3D) {
-        console.log('trans')
         const d = this.dataset[slot]
-        d.anchor = anchor
-        d.inner.position.set(-anchor[0], -anchor[1], -anchor[2])
-        d.outer.position.set(anchor[0] + offset[0], anchor[1] + offset[1], anchor[2] + offset[2])
+        const a = toWorld(anchor)
+        const o = toWorld(offset)
+
+        d.anchor = a
+        d.inner.position.set(-a[0], -a[1], -a[2])
+        d.outer.position.set(a[0] + o[0], a[1] + o[1], a[2] + o[2])
+        // NOTE: rotation is still an inert passthrough (not wired up yet).
+        // Euler angles can't be remapped by the same per-component swap as a
+        // position — they'll need proper conjugation by this rotation once
+        // alignment/rotation is actually implemented.
         d.outer.rotation.set(rotation[0], rotation[1], rotation[2], 'XYZ')
     }
 

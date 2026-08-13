@@ -214,7 +214,14 @@ const ViewPane = () => {
                 }
 
                 scene.setCamera(dataset.anchor, Math.max(x * sX, y * sY, z * sZ) / 1.5  )
-                refreshSlice(slot)
+
+                scene.setAxes(slot, dataset.scan.origin, [
+                    (x - 1) * sX,
+                    (y - 1) * sY,
+                    (z - 1) * sZ,
+                ])
+
+                // refreshSlice(slot)
             }
         })
     }, [

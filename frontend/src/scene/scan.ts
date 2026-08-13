@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { ResponseSlice } from '../types'
+import { toWorld } from './coords'
 
 const loader = new THREE.TextureLoader()
 
@@ -27,7 +28,8 @@ export const render = (slice: ResponseSlice): Promise<THREE.Mesh> => new Promise
             const normal = new THREE.Vector3().crossVectors(u, v).normalize()
 
             mesh.setRotationFromMatrix(new THREE.Matrix4().makeBasis(u, v, normal))
-            mesh.position.set(slice.center[0], slice.center[1], slice.center[2])
+            const c = toWorld(slice.center)
+            mesh.position.set(c[0], c[1], c[2])
             res(mesh)
         },
         undefined,

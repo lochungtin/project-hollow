@@ -152,6 +152,7 @@ export type VisDataset = {
     'anchor': Vec3D,
     'outs': { [key: string]: THREE.Object3D },
     'slices': { [key: string]: THREE.Object3D },
+    'axes': THREE.Object3D | null,
 }
 
 export type SliceState = {

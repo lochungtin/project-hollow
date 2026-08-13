@@ -30,6 +30,7 @@ def orthogonal(scan, ax, idx):
     z, y, x = scan.shape
     sZ, sY, sX = scan.spacing
     oX, oY, oZ = scan.origin
+    # oX, oY, oZ = 0, 0, 0
     idx = max(0, min(idx, {"axial": z, "coronal": y, "sagittal": x}[ax] - 1))
 
     shX = (x - 1) * sX
@@ -45,13 +46,13 @@ def orthogonal(scan, ax, idx):
     idxY = oY + idx * sY
     idxZ = oZ + idx * sZ
 
-    c = (
-        idxX if ax == "sagittal" else cX,
-        idxY if ax == "coronal" else cY,
-        idxZ if ax == "axial" else cZ,
-    )
-    dU = (float(ax != "sagittal"), float(ax == "sagittal"), 0.0)
-    dV = (0.0, float(ax == "axial"), float(ax != "axial"))
+    c = {
+        "axial": (cX, cY, idxZ),
+        "coronal": (cX, idxY, cZ),
+        "sagittal": (idxX, cY, cZ),
+    }[ax]
+    dU = {"axial": (1, 0, 0), "coronal": (1, 0, 0), "sagittal": (0, 1, 0)}[ax]
+    dV = {"axial": (0, 1, 0), "coronal": (0, 0, 1), "sagittal": (0, 0, 1)}[ax]
 
     if ax == "axial":
         img = scan.array[idx, :, :]
