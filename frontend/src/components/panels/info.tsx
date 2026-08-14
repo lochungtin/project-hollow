@@ -155,7 +155,7 @@ const ContentLoaded = ({ slot }: { slot: string }) => {
     }
     const _onClickContourSelect = (e: React.MouseEvent, slot: string, id: string) => {
         console.log('_onClickContourSelect', slot, id)
-        e.stopPropagation()
+        
         state.toggleContourSelect(slot, id)
     }
     const _onClickContourDMap = (e: React.MouseEvent, slot: string, id: string) => {

@@ -8,6 +8,7 @@ from ..parser import toContourObjs, toScanObj
 from ..storage import (
     clearDataset,
     clearGuavaStore,
+    clearResults,
     getDataset,
     getGuavaStore,
     setDataset,
@@ -15,6 +16,8 @@ from ..storage import (
 from .payload import AlignmentPayload, AnchorPayload, TargetPayload, VisibilityPayload
 
 router = APIRouter(prefix="/api/dataset", tags=["datasets"])
+
+ALL_RESULTS = ("bsd", "disp", "sepd", "divh", "sepdn")
 
 
 # --- REHYDRATION
@@ -40,6 +43,7 @@ async def upload_dicom(slot: str, files: list[UploadFile]):
     except Exception as exc:
         raise HTTPException(400, f"Error: load dicom series failed: {exc}")
 
+    clearResults(*ALL_RESULTS)
     return dataset.summary()
 
 
@@ -60,6 +64,7 @@ async def upload_dicom(slot: str, file: UploadFile):
     if not contours:
         raise HTTPException(400, "Error: no structures found in uploaded struct file.")
 
+    clearResults(*ALL_RESULTS)
     return dataset.summary()
 
 
@@ -67,6 +72,7 @@ async def upload_dicom(slot: str, file: UploadFile):
 async def delete_dataset(slot: str):
     clearDataset(slot)
     clearGuavaStore(slot)
+    clearResults(*ALL_RESULTS)
     return {"ok": True}
 
 
@@ -87,9 +93,10 @@ def update_scan_visibility(slot: str, id: str, body: VisibilityPayload):
 
 # --- TARGET
 @router.put("/{slot}/target")
-def update_scan_visibility(slot: str, body: TargetPayload):
+def update_target(slot: str, body: TargetPayload):
     dataset = getDataset(slot)
     dataset.targetID = body.id
+    clearResults("divh", "sepd", "sepdn")
     return dataset.summary()
 
 
@@ -105,6 +112,7 @@ def update_anchor(slot: str, body: AnchorPayload):
     dataset.anchorID = body.id
     dataset.anchor = np.asarray([body.x, body.y, body.z], dtype=float)
     dataset.alignment = np.zeros(3, dtype=float)
+    clearResults("disp")
     return dataset.summary()
 
 

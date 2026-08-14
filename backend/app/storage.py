@@ -60,5 +60,10 @@ def setResult(op, result):
     _RESULT_STORAGE[op] = result
 
 
+def clearResults(*ops):
+    for op in ops:
+        _RESULT_STORAGE[op] = {}
+
+
 # JOB QUEUE
 QUEUE = Queue()

@@ -12,6 +12,12 @@ const localAnchorFromAlignment = (alignment: number[], spacing: number[]) => ({
     px: alignment.map((v: number, i: number) => Math.round(v / spacing[i])),
 })
 
+// bsd/disp/sepd/divh/sepdn are cross-slot comparison results (unlike a contour's own
+// volume/surface_area, which live on the dataset itself and just naturally update/disappear
+// with it) — cached server-side and otherwise stale until explicitly invalidated, mirroring
+// storage.clearResults() on the backend so the UI doesn't wait for a reload to catch up.
+const emptyResults = (): ResultStore => ({ bsd: {}, disp: {}, sepd: {}, divh: [], sepdn: {} })
+
 
 const AppStateContext = createContext<AppState | null>(null)
 
@@ -106,6 +112,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 			setDataset((prev) => ({ ...prev, [slot]: ds }))
 			setLocalAnchorMM((prev) => ({ ...prev, [slot]: mm }))
 			setLocalAnchorPX((prev) => ({ ...prev, [slot]: px }))
+			setResults(emptyResults())
 
 		} catch (err) {
 			console.error(JSON.stringify(err))
@@ -119,6 +126,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 		try {
 			const ds = await uploadRTStructAPI(slot, file)
 			setDataset((prev) => ({ ...prev, [slot]: ds }))
+			setResults(emptyResults())
 		} catch (err) {
 			console.error(JSON.stringify(err))
 		} finally {
@@ -130,6 +138,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 		try {
 			await deleteDatasetAPI(slot)
 			setDataset((prev) => ({ ...prev, [slot]: null }))
+			setResults(emptyResults())
 		} catch (err) {
 			console.error(err)
 		}
@@ -168,6 +177,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 			setDataset((prev) => ({ ...prev, [slot]: ds }))
 			setLocalAnchorMM((prev) => ({ ...prev, [slot]: mm }))
 			setLocalAnchorPX((prev) => ({ ...prev, [slot]: px }))
+			setResults((prev) => ({ ...prev, disp: {} }))
 
 		} catch (err) {
 			console.error(JSON.stringify(err))
@@ -195,6 +205,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 		try {
 			const ds = await updateTargetAPI(slot, target)
 			setDataset((prev) => ({ ...prev, [slot]: ds }))
+			setResults((prev) => ({ ...prev, divh: [], sepd: {}, sepdn: {} }))
 		} catch (err) {
 			console.error(JSON.stringify(err))
 		}
