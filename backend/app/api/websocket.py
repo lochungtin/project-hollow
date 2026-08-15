@@ -1,4 +1,5 @@
 import asyncio
+import os
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
@@ -55,3 +56,4 @@ async def _shutdown() -> None:
     await asyncio.sleep(5)
     if ACTIVE_CONNECTIONS == 0:
         print("[SHUTDOWN]\tNo active connections - shutting down.")
+        os._exit(0)

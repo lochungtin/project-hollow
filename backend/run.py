@@ -21,7 +21,7 @@ def main(port):
         sys.exit(1)
 
     def run_browser():
-        time.sleep(1.2)
+        time.sleep(5)
         webbrowser.open(f"http://localhost:{port}")
 
     threading.Thread(target=run_browser, daemon=True).start()
