@@ -20,13 +20,13 @@ const Toolbar = () => {
                 </div>                
                 <span className='toolbar-hints mono'>
                     [Tab] dataset &middot;
-                    [D] dual mode &middot;
+                    [D] dual &middot;
                     [1/2/3] change axis &middot;
                     [4] arbitrary axis &middot;
-                    [M] contour slice mode &middot;
-                    [Scroll] slice &middot;
-                    [Space + Scroll] rotate &middot;
-                    [Ctrl + Scroll] zoom &middot;
+                    [M] 2D/3D &middot;
+                    [Wheel] slice &middot;
+                    [Space + Wheel] rotate &middot;
+                    [Ctrl + Wheel] zoom &middot;
                     [Enter] flat view &middot;
                     [O] reset camera
                 </span>

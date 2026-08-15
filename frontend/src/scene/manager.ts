@@ -10,22 +10,13 @@ export default class SceneManager {
     private camera
     private cameraTarget = new THREE.Vector3(0, 0, 0)
     private cameraDistance = 400
-    // unit vector from target to camera; orbiting rotates this (and cameraUp) about an
-    // arbitrary axis (see rotateCamera) instead of being restricted to yaw/pitch about the
-    // world Y/X axes
     private cameraOffset = new THREE.Vector3(
         Math.cos(Math.PI / 6) * Math.sin(Math.PI / 4),
         Math.sin(Math.PI / 6),
         Math.cos(Math.PI / 6) * Math.cos(Math.PI / 4),
     ).normalize()
-    // rotated in lockstep with cameraOffset so the camera doesn't roll/flip when orbiting
-    // about axes other than world Y (lookAt() alone assumes a fixed up and only behaves
-    // predictably for rotation about that same axis)
     private cameraUp = new THREE.Vector3(0, 1, 0)
 
-    // snapshot of the camera's state as originally framed — restored by resetCamera()
-    // (target/distance are re-captured each time a dataset is freshly framed via setCamera;
-    // offset/up are the fixed initial viewing angle and never change after construction)
     private defaultTarget = this.cameraTarget.clone()
     private defaultDistance = this.cameraDistance
     private defaultOffset = this.cameraOffset.clone()
@@ -36,10 +27,6 @@ export default class SceneManager {
 
     private frameHandle = 0
 
-    // '4' key: white line marking the arbitrary-axis slicing plane's normal. Global (not
-    // per-slot) since its normal can come from contours in either/both slots; unlike the
-    // main axes it isn't tied to active-slot visibility, since it's only ever created when
-    // explicitly requested.
     private arbitraryAxis: THREE.Line | null = null
 
     private dataset: { [key: string]: VisDataset } = {}
@@ -78,6 +65,7 @@ export default class SceneManager {
         ;['A', 'B'].forEach(slot => {this.dataset[slot] = this.makeDataset(slot)})
     }
 
+    /** Resizes the renderer and camera aspect to match the container's current size. */
     resize() {
         const w = this.container.clientWidth || 1
         const h = this.container.clientHeight || 1
@@ -86,11 +74,13 @@ export default class SceneManager {
         this.renderer.setSize(w, h, false)
     }
 
+    /** Renders one animation frame and schedules the next. */
     private animate() {
         this.frameHandle = requestAnimationFrame(this.animate)
         this.renderer.render(this.scene, this.camera)
     }
 
+    /** Tears down the renderer, observers, and all scene content. */
     dispose() {
         cancelAnimationFrame(this.frameHandle)
         this.resizeObserver.disconnect()
@@ -104,8 +94,8 @@ export default class SceneManager {
         this.renderer.dispose()
         this.renderer.domElement.remove()
     }
-    
-    // --- CAMERA
+
+    /** Frames the camera on a newly-loaded dataset and records this as the camera's reset state. */
     setCamera(center: Vec3D, radius: number) {
         const c = toWorld(center)
         this.cameraTarget.set(c[0], c[1], c[2])
@@ -117,6 +107,7 @@ export default class SceneManager {
         this.updateCamera()
     }
 
+    /** Applies the current target/offset/distance/up state to the camera object. */
     private updateCamera() {
         const pos = this.cameraTarget.clone().addScaledVector(this.cameraOffset, this.cameraDistance)
         this.camera.position.copy(pos)
@@ -124,18 +115,14 @@ export default class SceneManager {
         this.camera.lookAt(this.cameraTarget)
     }
 
-    // ctrl/cmd + scroll: sign < 0 (scroll up) zooms in, sign > 0 (scroll down) zooms out
+    /** Zooms the camera in (sign < 0) or out (sign > 0) by a fixed step. */
     zoomCamera(sign: number) {
         const factor = sign > 0 ? 1.1 : 1 / 1.1
         this.cameraDistance = THREE.MathUtils.clamp(this.cameraDistance * factor, 20, 10000)
         this.updateCamera()
     }
 
-    // space + scroll: orbit the camera about `axis` (a patient-space direction, e.g. the
-    // current slice's normal). `angle` is a right-hand-rule rotation about `axis`: viewed
-    // from the tip of `axis` looking back at the target (i.e. looking into the screen along
-    // -axis, matching how the corresponding slice is actually viewed), a negative angle
-    // reads as clockwise and a positive angle as anticlockwise.
+    /** Orbits the camera by `angle` about `axis` (a patient-space direction), keeping cameraUp in lockstep to avoid roll. */
     rotateCamera(axis: Vec3D, angle: number) {
         const worldAxis = new THREE.Vector3(...toWorld(axis)).normalize()
         this.cameraOffset.applyAxisAngle(worldAxis, angle)
@@ -143,18 +130,14 @@ export default class SceneManager {
         this.updateCamera()
     }
 
-    // enter key: snap the camera to look straight down `normal` (world-space, pointing from
-    // the slice plane toward the camera, i.e. the viewing direction ends up perpendicular to
-    // the plane) with `up` as the screen's vertical — a flat, face-on 2D view of the slice.
-    // Distance is left untouched so the current zoom level is preserved.
+    /** Snaps the camera to a flat, face-on view along `normal` with `up` as the screen vertical, preserving zoom distance. */
     setOrthogonalView(normal: THREE.Vector3, up: THREE.Vector3) {
         this.cameraOffset.copy(normal).normalize()
         this.cameraUp.copy(up).normalize()
         this.updateCamera()
     }
 
-    // 'o' key: restore the camera to how it was framed when the dataset first loaded,
-    // undoing any zoom/orbit made since.
+    /** Restores the camera to the state captured by the most recent `setCamera` call. */
     resetCamera() {
         this.cameraTarget.copy(this.defaultTarget)
         this.cameraDistance = this.defaultDistance
@@ -163,10 +146,7 @@ export default class SceneManager {
         this.updateCamera()
     }
 
-    // --- AXES
-    // Cross centered on (0, 0, 0) — each line spans the dataset's full extent along its
-    // own axis, meeting at world origin (where the scan's own center sits right after
-    // load, before any anchor edit — see setDatasetTrans).
+    /** Builds a world-origin-centered RGB cross spanning `extent` along each patient-space axis. */
     private makeAxes(extent: Vec3D): THREE.LineSegments {
         const [eX, eY, eZ] = toWorld(extent)
 
@@ -175,15 +155,15 @@ export default class SceneManager {
         const shZ = eZ / 2
 
         const positions = new Float32Array([
-            -shX, 0, 0,   shX, 0, 0,   // X axis
-            0, -shY, 0,   0, shY, 0,   // Y axis
-            0, 0, -shZ,   0, 0, shZ,   // Z axis
+            -shX, 0, 0,   shX, 0, 0,
+            0, -shY, 0,   0, shY, 0,
+            0, 0, -shZ,   0, 0, shZ,
         ])
 
         const colors = new Float32Array([
-            1, 0, 0,  1, 0, 0,   // red
-            0, 1, 0,  0, 1, 0,   // green
-            0, 0, 1,  0, 0, 1,   // blue
+            1, 0, 0,  1, 0, 0,
+            0, 1, 0,  0, 1, 0,
+            0, 0, 1,  0, 0, 1,
         ])
 
         const geom = new THREE.BufferGeometry()
@@ -194,9 +174,7 @@ export default class SceneManager {
         return new THREE.LineSegments(geom, mat)
     }
 
-    // Axes are anchored to world origin and live directly on the scene, outside the
-    // per-slot inner/outer transform chain, so they never move when a dataset's anchor
-    // (or alignment offset) changes — only the scan content should translate.
+    /** (Re)builds a slot's fixed, world-origin-anchored axes cross, visible only when that slot is active. */
     setAxes(slot: string, extent: Vec3D) {
         const d = this.dataset[slot]
         if (d.axes) {
@@ -208,9 +186,7 @@ export default class SceneManager {
         this.scene.add(d.axes)
     }
 
-    // '4' key: single white line through world origin along the arbitrary slicing plane's
-    // normal (patient-space), spanning `extent` mm total. Like the main axes it's centered
-    // on world origin, but it isn't per-slot and isn't tied to active-slot visibility.
+    /** Draws the global arbitrary-axis marker line through world origin along `normal`. */
     setArbitraryAxis(normal: Vec3D, extent: number) {
         this.clearArbitraryAxis()
 
@@ -228,6 +204,7 @@ export default class SceneManager {
         this.scene.add(this.arbitraryAxis)
     }
 
+    /** Removes and disposes the arbitrary-axis marker line, if present. */
     clearArbitraryAxis() {
         if (this.arbitraryAxis) {
             this.scene.remove(this.arbitraryAxis)
@@ -236,9 +213,9 @@ export default class SceneManager {
         }
     }
 
-    // --- ACTIVE SLOT
     private activeSlot = 'A'
 
+    /** Sets which slot's content (and axes) is visible. */
     setActiveSlot(slot: string) {
         this.activeSlot = slot
         Object.entries(this.dataset).forEach(([s, d]) => {
@@ -248,10 +225,7 @@ export default class SceneManager {
         })
     }
 
-    // ctrl+tab: show both slots' content together (so both sets of contours render at once),
-    // with each slot's scan slice hidden first — a pure view-layer override, contour
-    // visibility and dataset.scan.visible are left untouched. Exiting just falls back to the
-    // normal single-slot display via setActiveSlot('A').
+    /** Enables/disables dual mode: shows both slots' content at once with scans force-hidden, or falls back to slot A when disabled. */
     setDualMode(active: boolean) {
         if (!active) {
             this.setActiveSlot('A')
@@ -264,7 +238,7 @@ export default class SceneManager {
         })
     }
 
-    // --- DATASET
+    /** Builds a fresh, empty inner/outer group pair for a slot. */
     private makeDataset(slot: string): VisDataset {
         const inner = new THREE.Group()
         const outer = new THREE.Group()
@@ -276,6 +250,7 @@ export default class SceneManager {
         return { inner, outer, 'anchor':[0, 0, 0], 'outs': {}, 'slices': {}, 'overlays': {}, 'axes': null }
     }
 
+    /** Disposes and resets a slot's entire scene content back to an empty state. */
     removeDataset(slot: string) {
         const d = this.dataset[slot]
         disposeObj(d.outer)
@@ -287,11 +262,7 @@ export default class SceneManager {
         this.dataset[slot] = this.makeDataset(slot)
     }
 
-    // Content is shifted by -anchor so the anchor point sits at the outer group's local
-    // origin (this is also what lets `rotation` pivot around the anchor rather than world
-    // origin), then the whole group is placed at `offset` in world space. The anchor's
-    // own world position is intentionally NOT re-added here — that's what makes the scan
-    // translate as the anchor changes, while the (scene-level, always-origin) axes stay put.
+    /** Positions a slot's content so `anchor` sits at world origin, then offsets by `offset`; `rotation` is not yet wired up. */
     setDatasetTrans(slot: string, anchor: Vec3D, offset: Vec3D, rotation: Vec3D) {
         const d = this.dataset[slot]
         const a = toWorld(anchor)
@@ -300,14 +271,10 @@ export default class SceneManager {
         d.anchor = a
         d.inner.position.set(-a[0], -a[1], -a[2])
         d.outer.position.set(o[0], o[1], o[2])
-        // NOTE: rotation is still an inert passthrough (not wired up yet).
-        // Euler angles can't be remapped by the same per-component swap as a
-        // position — they'll need proper conjugation by this rotation once
-        // alignment/rotation is actually implemented.
         d.outer.rotation.set(rotation[0], rotation[1], rotation[2], 'XYZ')
     }
 
-    // --- PLANE SLICING
+    /** Replaces (or clears) the scan slice plane rendered under `key` for a slot. */
     setSlice(slot: string, key: string, slice: THREE.Object3D | null) {
         const d = this.dataset[slot]
         if (key in d.slices) {
@@ -322,6 +289,7 @@ export default class SceneManager {
         }
     }
 
+    /** Removes and disposes every slice plane for a slot. */
     clearSlice(slot: string) {
         const d = this.dataset[slot]
         Object.values(d.slices).forEach(p => {
@@ -331,15 +299,13 @@ export default class SceneManager {
         d.slices = {}
     }
 
+    /** Sets visibility of all of a slot's scan slice planes. */
     setScanVisibility(slot: string, visible: boolean) {
         const d = this.dataset[slot]
         Object.values(d.slices).forEach(obj => { obj.visible = visible })
     }
 
-    // --- SLICE-MODE OVERLAYS ("M" key)
-    // Separate from `slices` so setScanVisibility's sweep never touches these — per-contour
-    // overlay planes ('contour:{id}') stay visible/hidden independently of whether the real
-    // scan slice is shown.
+    /** Replaces (or clears) the contour slice-overlay plane rendered under `key` for a slot. */
     setOverlay(slot: string, key: string, obj: THREE.Object3D | null) {
         const d = this.dataset[slot]
         if (key in d.overlays) {
@@ -353,6 +319,7 @@ export default class SceneManager {
         }
     }
 
+    /** Removes and disposes every overlay plane for a slot. */
     clearOverlays(slot: string) {
         const d = this.dataset[slot]
         Object.values(d.overlays).forEach(p => {
@@ -362,10 +329,7 @@ export default class SceneManager {
         d.overlays = {}
     }
 
-    // removes only overlays whose key isn't in `keepKeys`, leaving the rest untouched — used
-    // instead of clearOverlays for a scroll-driven refresh, so a contour that's still visible
-    // keeps showing its previous (slightly stale) overlay until the new one is ready, rather
-    // than flashing blank on every tick while the replacement is still in flight
+    /** Removes only the overlay planes whose key is not in `keepKeys`, leaving the rest untouched. */
     pruneOverlays(slot: string, keepKeys: Set<string>) {
         const d = this.dataset[slot]
         Object.keys(d.overlays).forEach(key => {
@@ -374,7 +338,7 @@ export default class SceneManager {
         })
     }
 
-    // --- CONTOUR / SURFACE
+    /** Replaces a contour's rendered 3D mesh with a freshly-built one. */
     renderContour(
         slot: string,
         id: string,
@@ -395,6 +359,7 @@ export default class SceneManager {
         d.outs[id] = obj
     }
 
+    /** Removes and disposes a contour's rendered mesh, if present. */
     removeContour(slot: string, id: string) {
         const d = this.dataset[slot]
         const obj = d.outs[id]
@@ -405,10 +370,12 @@ export default class SceneManager {
         delete d.outs[id]
     }
 
+    /** Returns whether a contour currently has a rendered mesh in a slot. */
     rendered(slot: string, id: string) {
         return id in this.dataset[slot].outs
     }
 
+    /** Sets visibility of a contour's rendered mesh, if present. */
     setContourVisibility(slot: string, id: string, visible: boolean) {
         const obj = this.dataset[slot].outs[id]
         if (obj)
@@ -417,7 +384,7 @@ export default class SceneManager {
 }
 
 
-
+/** Recursively disposes a Three.js object's geometry and material(s). */
 const disposeObj = (obj: THREE.Object3D) => {
     obj.traverse((child) => {
         const c = child as unknown as { geometry?: THREE.BufferGeometry, material?: THREE.Material | THREE.Material[] }

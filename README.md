@@ -10,9 +10,11 @@ Everything runs locally — there is no cloud dependency and no data ever leaves
 
 - **DICOM series + RT Structure Set loading**, into two independent slots (`A` and `B`) so you can load, say, an upright and a supine scan of the same patient at once.
 - **Interactive 3D viewing** — orbit, zoom, and page through axial/coronal/sagittal slices rendered as textured planes in a real 3D scene, alongside any loaded contour surfaces.
+- **Contour slice-overlay mode** — instead of full 3D surfaces, draw each contour's 2D cross-section directly onto the current slice, for a classic axial/coronal/sagittal-with-outlines view.
 - **Arbitrary-axis slicing** — pick any two contours and slice the volume along the axis between their centers of mass, interpolated on the fly (not restricted to the voxel grid).
 - **Dataset registration** — anchor a dataset to a specific point (e.g. a contour's center of mass) and manually nudge its position, so two differently-positioned scans can be visually aligned at a shared reference point.
-- **Dual mode** — view both datasets' contour surfaces overlaid at once for a direct visual comparison.
+- **Dual mode** — view both datasets' contours overlaid at once (3D surfaces or 2D slice-overlays) for a direct visual comparison.
+- **Distance-map visualization** — color a contour's surface (or slice cross-section) by its distance from the current target ROI, red (near) to blue (far), on a scale shared across every contour so you can compare at a glance.
 - **Quantitative GUAVA-RT analysis**, computed between whatever's loaded in slots A and B:
   - Volume & surface area per structure
   - Bidirectional Surface Discrepancy (BSD)
@@ -71,15 +73,16 @@ You can load a dataset into slot `A`, slot `B`, or both — most of the app work
 |---|---|
 | `Tab` | Switch the active slot (`A` ↔ `B`) — or, if dual mode is active, exit it back to slot `A` |
 | `D` | Toggle dual mode: show both slots' contours together, with both scans hidden |
+| `M` | Toggle contour slice-overlay mode: draw each visible contour's 2D cross-section on the current slice instead of its full 3D surface |
 | `1` / `2` / `3` | Switch to axial / coronal / sagittal slicing |
 | `4` | Switch to arbitrary-axis slicing (requires exactly two contours selected — see below) |
-| Scroll | Page through slices along the current axis |
-| `Ctrl`/`Cmd` + Scroll | Zoom the camera |
-| `Space` + Scroll | Orbit the camera around the axis normal to the current slice view |
+| Wheel | Page through slices along the current axis |
+| `Ctrl`/`Cmd` + Wheel | Zoom the camera |
+| `Space` + Wheel | Orbit the camera around the axis normal to the current slice view |
 | `Enter` | Snap to a flat, face-on view of the current slice (axial/coronal/sagittal only) |
 | `O` | Reset the camera to how it was framed when the dataset loaded |
 
-Only one slot's scan and contours are rendered at a time (whichever is active) — use `Tab` to flip between them, or `D` for a side-by-side contour comparison in dual mode.
+Only one slot's scan and contours are rendered at a time (whichever is active) — use `Tab` to flip between them, or `D` for a side-by-side contour comparison in dual mode. `M` works the same way in either single-slot or dual mode.
 
 ### Aligning two datasets
 
@@ -91,12 +94,13 @@ In the info panel:
 
 ### Working with contours
 
-Once an RT Structure Set is loaded, each structure appears in the contour list with four actions:
+Once an RT Structure Set is loaded, each structure appears in the contour list with five actions:
 
-- **Name / color swatch** — click to toggle that contour's visibility in the 3D view.
+- **Name / color swatch** — click to toggle that contour's visibility in the 3D view. Colors are assigned automatically and consistently by dataset: slot `A`'s contours are red/purple/blue tones, slot `B`'s are yellow/green tones, spread out so contours within the same dataset stay visually distinct from each other.
 - **Anchor icon** — pin this contour's center of mass as the dataset's anchor point (see above).
-- **Target icon** — mark this contour as the target ROI, used by the GUAVA-RT analyses.
+- **Target icon** — mark this contour as the target ROI, used by the GUAVA-RT analyses and by distance-map visualization (see below).
 - **Select icon** — mark this contour as one of up to two selected contours, used to define the normal for arbitrary-axis slicing (press `4` once two are selected, across either or both slots).
+- **DMap icon** — toggle distance-map visualization for this contour: instead of its flat color, it renders (as a 3D surface, or a 2D cross-section in slice-overlay mode) colored by its distance from the current target ROI, red for near and blue for far, on a scale shared across every contour in the dataset. Disabled until a target is set, and for the target contour itself.
 
 ### Running analyses
 

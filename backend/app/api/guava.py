@@ -18,24 +18,28 @@ JOB_LIST = {
 
 
 @router.get("/device")
-def getDeviceInfo():
+def getDeviceInfo() -> str:
+    """Return the compute device this server is running GUAVA-RT on."""
     return getDevice()
 
 
 @router.get("/results")
-def rehydrateResults():
+def rehydrateResults() -> dict:
+    """Return every cached analysis result, with DiVH reduced to its structure name list."""
     rt = deepcopy(getResults())
     rt["divh"] = list(rt["divh"].keys())
     return rt
 
 
 @router.get("/results/divh/{roi}")
-def getDiVHResult(roi):
+def getDiVHResult(roi: str) -> dict | None:
+    """Return the cached DiVH result for a single structure name."""
     return getResults("divh").get(roi)
 
 
 @router.get("/queue/{job}")
-async def triggerOperation(job: str):
+async def triggerOperation(job: str) -> dict:
+    """Launch the named GUAVA analysis job on the queue and return its initial state."""
     try:
         name, fn = JOB_LIST[job]
     except:

@@ -3,24 +3,19 @@ import { deleteDatasetAPI, getDeviceAPI, getDiVHAPI, rehydrateDatasetAPI, rehydr
 import { socket } from './api/websocket'
 import { AppState, Dataset, Job, ResponseDiVHSingle, ResultStore, SelectedContour } from './types'
 
-// the anchor point always maps to world origin (see SceneManager.setDatasetTrans); alignment
-// is where it's then placed, relative to that same world origin — so alignment IS the
-// "anchor position relative to world origin" the MM/PX fields are meant to show and edit.
-// mm is alignment as-is; px is mm divided by voxel spacing (spacing is mm per voxel).
+/** Derives the anchor MM/PX display fields from a dataset's alignment and voxel spacing. */
 const localAnchorFromAlignment = (alignment: number[], spacing: number[]) => ({
     mm: alignment.map((v: number) => Math.round(v)),
     px: alignment.map((v: number, i: number) => Math.round(v / spacing[i])),
 })
 
-// bsd/disp/sepd/divh/sepdn are cross-slot comparison results (unlike a contour's own
-// volume/surface_area, which live on the dataset itself and just naturally update/disappear
-// with it) — cached server-side and otherwise stale until explicitly invalidated, mirroring
-// storage.clearResults() on the backend so the UI doesn't wait for a reload to catch up.
+/** Returns an empty GUAVA result store, matching the server's post-invalidation shape. */
 const emptyResults = (): ResultStore => ({ bsd: {}, disp: {}, sepd: {}, divh: [], sepdn: {} })
 
 
 const AppStateContext = createContext<AppState | null>(null)
 
+/** Accesses the global app state; must be called within an `AppStateProvider`. */
 export const useAppState = () => {
 	const ctx = useContext(AppStateContext)
 	if (!ctx)
@@ -38,12 +33,8 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 	const [localAnchorMM, setLocalAnchorMM] = useState({ 'A': [0, 0, 0], 'B': [0, 0, 0] })
 	const [localAnchorPX, setLocalAnchorPX] = useState({ 'A': [0, 0, 0], 'B': [0, 0, 0] })
 
-	// up to two contours, for defining an arbitrary slicing axis (see ViewPane's '4' key
-	// handler) — the normal is the direction between their centers of mass
 	const [selected, setSelected] = useState<SelectedContour[]>([])
 
-	// contours currently rendered via the target's distance map ("DMap" button) instead of
-	// their flat color — any number at once, unlike `selected`'s 2-item cap
 	const [dmapContours, setDMapContours] = useState<SelectedContour[]>([])
 
 	const [jobs, setJobs] = useState<Job[]>([])
@@ -51,6 +42,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 
 	const [divh, setDiVH] = useState<ResponseDiVHSingle>({ 'A': [], 'B': [] })
 
+	/** Reloads both slots' datasets and the cached GUAVA result store from the server. */
 	const rehydrate = useCallback(async () => {
 		try {
 			const datasets = await rehydrateDatasetAPI()
@@ -105,7 +97,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 	}, [])
 
 
-	// --- FILE UPLOAD
+	/** Uploads a DICOM series into a slot and replaces that slot's local dataset state. */
 	const uploadDicom = useCallback(async (slot: string, files: File[] | FileList) => {
 		setUploading((prev) => ({ ...prev, [slot]: true }))
 		try {
@@ -125,6 +117,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 		}
 	}, [])
 
+	/** Uploads an RTSTRUCT file into a slot and replaces that slot's local dataset state. */
 	const uploadRTStruct = useCallback(async (slot: string, file: File) => {
 		setUploading((prev) => ({ ...prev, [slot]: true }))
 		try {
@@ -138,6 +131,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 		}
 	}, [])
 
+	/** Deletes a slot's dataset and clears the cached GUAVA results. */
 	const deleteDataset = useCallback(async (slot: string) => {
 		try {
 			await deleteDatasetAPI(slot)
@@ -148,7 +142,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 		}
 	}, [])
 
-	// --- TOGGLE VISIBILITY
+	/** Toggles visibility of a scan or a single contour in a slot. */
 	const updateVisibility = useCallback(async (slot: string, type: string, visible: boolean, id?: string) => {
 		try {
 			const ds = await updateVisibilityAPI(slot, type, visible, id)
@@ -158,20 +152,19 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 		}
 	}, [])
 
-	// --- UPDATE ANCHOR
+	/** Updates a slot's locally-displayed anchor MM field. */
 	const updateLocalAnchorMM = (slot: string, anchor: number[]) => {
 		const ints = anchor.map(Math.round)
 		setLocalAnchorMM((prev) => ({ ...prev, [slot]: ints }))
 	}
 
+	/** Updates a slot's locally-displayed anchor PX field. */
 	const updateLocalAnchorPX = (slot: string, anchor: number[]) => {
 		const ints = anchor.map(Math.round)
 		setLocalAnchorPX((prev) => ({ ...prev, [slot]: ints }))
 	}
 
-	// picks which point becomes the anchor (e.g. a contour's center of mass); the backend
-	// resets alignment to zero when this happens, so that point lands exactly on world
-	// origin — reflect that in the local MM/PX display too.
+	/** Sets a slot's anchor point and clears the now-stale displacement result. */
 	const updateAnchor = useCallback(async (slot: string, anchor: number[], id: string = 'unknown') => {
 		try {
 			const ds = await updateAnchorAPI(slot, anchor, id)
@@ -188,7 +181,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 		}
 	}, [])
 
-	// manual translation of the dataset, relative to world origin
+	/** Manually translates a slot's dataset relative to world origin. */
 	const updateAlignment = useCallback(async (slot: string, alignment: number[]) => {
 		try {
 			const ds = await updateAlignmentAPI(slot, alignment)
@@ -204,24 +197,20 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 		}
 	}, [])
 
-	// --- UPDATE TARGET
+	/** Sets a slot's GUAVA target contour, clears now-stale results, and drops it out of DMap mode. */
 	const updateTarget = useCallback(async (slot: string, target: string) => {
 		try {
 			const ds = await updateTargetAPI(slot, target)
 			setDataset((prev) => ({ ...prev, [slot]: ds }))
 			setResults((prev) => ({ ...prev, divh: [], sepd: {}, sepdn: {} }))
 
-			// the DMap button is disabled for whichever contour is the target (its own
-			// distance map is trivial), so drop it out of dmap mode if it was already toggled
 			setDMapContours((prev) => prev.filter((s) => !(s.slot === slot && s.id === target)))
 		} catch (err) {
 			console.error(JSON.stringify(err))
 		}
 	}, [])
 
-	// --- CONTOUR SELECTION (for arbitrary axis slicing)
-	// local-only, capped at two: toggling a third selected contour while two are already
-	// selected is a no-op (deselect one first)
+	/** Toggles a contour in/out of the arbitrary-axis selection, capped at two entries. */
 	const toggleContourSelect = useCallback((slot: string, id: string) => {
 		setSelected((prev) => {
 			const idx = prev.findIndex((s) => s.slot === slot && s.id === id)
@@ -236,9 +225,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 		})
 	}, [])
 
-	// --- CONTOUR DISTANCE MAP ("DMap" button)
-	// local-only, no cap — any number of contours can be shown against the target's distance
-	// map simultaneously
+	/** Toggles a contour in/out of distance-map rendering mode. */
 	const toggleContourDMap = useCallback((slot: string, id: string) => {
 		setDMapContours((prev) => {
 			const idx = prev.findIndex((s) => s.slot === slot && s.id === id)
@@ -251,7 +238,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 		})
 	}, [])
 
-	// --- GUAVA OPERATIONS
+	/** Queues a named GUAVA operation as a background job. */
 	const trigger = useCallback(async (op: string) => {
 		try {
 			const job = await triggerGuavaOpAPI(op)
@@ -261,6 +248,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 		}
 	}, [])
 
+	/** Removes a job from the local job list (e.g. once its toast is dismissed). */
 	const removeJob = (job: Job) => {
 		setJobs((prev) => {
 			const idx = prev.findIndex((j) => j.id === job.id)
@@ -272,6 +260,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 		})
 	}
 
+	/** Fetches a single ROI's DiVH result into local state. */
 	const getDiVH = useCallback(async (roi: string) => {
 		try {
 			const res = await getDiVHAPI(roi)

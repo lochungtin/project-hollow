@@ -1,5 +1,4 @@
 import asyncio
-import os
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
@@ -13,7 +12,8 @@ router = APIRouter()
 
 
 @router.websocket("/ws")
-async def handshake(websocket: WebSocket):
+async def handshake(websocket: WebSocket) -> None:
+    """Accept a websocket client, stream job list/updates to it, and track connection count."""
     global ACTIVE_CONNECTIONS, EVER_CONNECTED, SHUTDOWN
 
     await websocket.accept()
@@ -25,7 +25,8 @@ async def handshake(websocket: WebSocket):
         SHUTDOWN.cancel()
         SHUTDOWN = None
 
-    async def send(payload):
+    async def send(payload: dict) -> None:
+        """Send `payload` to this connection as JSON."""
         await websocket.send_json(payload)
 
     QUEUE.subscribe(send)
@@ -47,7 +48,10 @@ async def handshake(websocket: WebSocket):
 
 
 async def shutdown() -> None:
+    """Wait 5s, then log a shutdown notice if no client has reconnected.
+
+    Process exit is currently disabled.
+    """
     await asyncio.sleep(5)
     if ACTIVE_CONNECTIONS == 0:
         print("[SHUTDOWN]\tNo active connections - shutting down.")
-        # os._exit(0)

@@ -1,5 +1,6 @@
 from colorsys import hls_to_rgb
 from io import BytesIO
+from typing import Any
 
 import guava_rt as gv
 import numpy as np
@@ -13,8 +14,8 @@ from .models.scan import Scan
 from .storage import getDevice
 
 
-# --- Dicom Series
-def _byteToSlices(filesBytes):
+def _byteToSlices(filesBytes: list[bytes]) -> list[dcm.FileDataset]:
+    """Parse raw DICOM file bytes into pydicom datasets, keeping only ones with pixel data."""
     rt = []
     for b in filesBytes:
         try:
@@ -24,7 +25,8 @@ def _byteToSlices(filesBytes):
     return [d for d in rt if hasattr(d, "PixelData")]
 
 
-def _sortSlices(raw):
+def _sortSlices(raw: list[dcm.FileDataset]) -> list[dict[str, Any]]:
+    """Sort raw DICOM slices along their shared volume normal, derived from orientation."""
     iop = getattr(raw[0], "ImageOrientationPatient", [1, 0, 0, 0, 1, 0])
     iop = np.asarray(iop, float)
 
@@ -43,7 +45,8 @@ def _sortSlices(raw):
     return sorted(rt, key=lambda s: s["normal"])
 
 
-def _buildVolume(slices, shape):
+def _buildVolume(slices: list[dict[str, Any]], shape: tuple[int, int, int]) -> np.ndarray:
+    """Stack sorted slices into a single volume, applying each slice's HU rescale."""
     rt = np.zeros(shape, dtype=np.float32)
     for i, s in enumerate(slices):
         arr = s["data"].pixel_array.astype(np.float32)
@@ -55,7 +58,8 @@ def _buildVolume(slices, shape):
     return rt
 
 
-def _getSpacing(slices, first):
+def _getSpacing(slices: list[dict[str, Any]], first: dcm.FileDataset) -> tuple[float, float, float]:
+    """Derive (z, y, x) voxel spacing from inter-slice distance and PixelSpacing."""
     spacing = np.asarray(getattr(first, "PixelSpacing", [1.0, 1.0]), float)
 
     if len(slices) > 1:
@@ -69,14 +73,16 @@ def _getSpacing(slices, first):
     return (sZ, float(spacing[0]), float(spacing[1]))
 
 
-def _resample(volume, spacing):
+def _resample(volume: np.ndarray, spacing: tuple[float, float, float]) -> np.ndarray:
+    """Resample `volume` to isotropic spacing (matching its smallest axis) if needed."""
     factor = spacing / np.min(spacing)
     if any(abs(f - 1.0) > 1e-3 for f in factor):
         return ndi_zoom(volume, factor, order=1, mode="nearest")
     return volume
 
 
-def toScanObj(filesBytes):
+def toScanObj(filesBytes: list[bytes]) -> Scan:
+    """Build a `Scan` (isotropic HU volume plus spacing/origin/modality) from DICOM series bytes."""
     if not filesBytes:
         raise ValueError("No DICOM files provided")
 
@@ -99,31 +105,23 @@ def toScanObj(filesBytes):
     )
 
 
-# --- RTStruct
-# low-discrepancy multipliers (irrational, so `index * step mod 1` stays spread out across
-# contours instead of clustering short-range, even for structures adjacent in the RTSTRUCT's
-# own ordering) — one per HLS channel so hue/lightness/saturation don't co-vary in lockstep
-_HUE_STEP = 0.6180339887498949  # golden ratio conjugate
-_LGT_STEP = 0.4142135623730951  # sqrt(2) - 1
-_SAT_STEP = 0.7320508075688772  # sqrt(3) - 1
-
-# dataset A -> red/purple/blue, dataset B -> yellow/green/dark green: disjoint hue bands
-# (colorsys's hue wheel: 0=red, 1/6=yellow, 1/3=green, 1/2=cyan, 2/3=blue, 5/6=magenta), each
-# spanning half the wheel so the two datasets stay visually distinguishable at a glance, not
-# just contour-by-contour, while individual contours within a dataset still read as clearly
-# different colors (red vs. purple vs. blue; yellow vs. green vs. dark green)
+_HUE_STEP = 0.6180339887498949
+_LGT_STEP = 0.4142135623730951
+_SAT_STEP = 0.7320508075688772
 _HUE_RANGES = {"A": (0.58, 1.00), "B": (0.13, 0.42)}
 
 
-def _contourColor(slot, index):
+def _contourColor(slot: str, index: int) -> list[int]:
+    """Deterministically derive an HLS-based RGB color for contour `index` in `slot`."""
     loH, hiH = _HUE_RANGES.get(slot, (0.0, 1.0))
     h = loH + ((index * _HUE_STEP) % 1.0) * (hiH - loH)
-    l = 0.32 + ((index * _LGT_STEP) % 1.0) * 0.36  # wide enough for a "dark green"-style low end, never near-black
-    s = 0.55 + ((index * _SAT_STEP) % 1.0) * 0.40  # stay vivid, never washed out
+    l = 0.32 + ((index * _LGT_STEP) % 1.0) * 0.36
+    s = 0.55 + ((index * _SAT_STEP) % 1.0) * 0.40
     return [int(v * 255) for v in hls_to_rgb(h, l, s)]
 
 
-def toContourObjs(slot, fileBytes, scan):
+def toContourObjs(slot: str, fileBytes: bytes, scan: Scan) -> dict[str, Contour]:
+    """Build a dict of `Contour` objects (mask, mesh, color, center of mass) from an RTSTRUCT."""
     structSet = dcm.dcmread(BytesIO(fileBytes), force=True)
 
     roi_names = {}
@@ -166,8 +164,6 @@ def toContourObjs(slot, fileBytes, scan):
 
         gvMask = gv.Mask(mask, getDevice())
 
-        # gvMask.center_of_mass is the mean voxel *index*, in (z, y, x) array order —
-        # convert to absolute patient-space mm, (x, y, z), matching scan.origin/anchor
         zi, yi, xi = gvMask.center_of_mass.cpu().numpy().tolist()
         centerOfMass = (oX + xi * sX, oY + yi * sY, oZ + zi * sZ)
 

@@ -4,7 +4,8 @@ import numpy as np
 from .storage import getDataset, getDevice, getGuavaStore, setResult
 
 
-def buildRegions():
+def buildRegions() -> tuple[gv.Region | None, gv.Region | None]:
+    """Build (or rebuild) both slots' `gv.Region` objects from their stored masks and target."""
     gvStore = getGuavaStore()
 
     for slot in ("A", "B"):
@@ -32,7 +33,8 @@ def buildRegions():
     return gvStore["regions"]["A"], gvStore["regions"]["B"]
 
 
-def buildMetrics(rA, rB):
+def buildMetrics(rA: gv.Region, rB: gv.Region) -> gv.Metrics:
+    """Build a `gv.Metrics` comparing regions `rA` and `rB`."""
     return gv.Metrics(
         rA,
         rB,
@@ -43,7 +45,8 @@ def buildMetrics(rA, rB):
     )
 
 
-def getBSD():
+def getBSD() -> dict:
+    """Compute and cache Bidirectional Surface Discrepancy (ASD/HD95/HD) per structure."""
     gvStore = getGuavaStore()
     rA, rB = gvStore["regions"]["A"], gvStore["regions"]["B"]
     if rA is None or rB is None:
@@ -67,7 +70,8 @@ def getBSD():
     return rt
 
 
-def getDisp():
+def getDisp() -> dict:
+    """Compute and cache each structure's relative displacement between slots A and B."""
     metrics = buildMetrics(*buildRegions())
     rt = {}
     for name, val in metrics.getROIDisplacementDiff().items():
@@ -77,7 +81,8 @@ def getDisp():
     return rt
 
 
-def getSepD():
+def getSepD() -> dict:
+    """Compute and cache volume-based separation distance per structure."""
     metrics = buildMetrics(*buildRegions())
     rt = {}
     for name, rows in metrics.getSeparationDistanceDiff("volume").items():
@@ -96,7 +101,8 @@ def getSepD():
     return rt
 
 
-def getDiVH():
+def getDiVH() -> list[str]:
+    """Compute and cache each structure's Distance Volume Histogram for both slots."""
     rA, rB = buildRegions()
 
     resA = rA.getThresholdedOverlapPercentages("volume", percentages_only=False)
@@ -117,7 +123,8 @@ def getDiVH():
     return list(rt.keys())
 
 
-def getSepDN():
+def getSepDN() -> dict:
+    """Compute and cache RCVS-based (nearside) separation distance per structure."""
     metrics = buildMetrics(*buildRegions())
     rt = {}
     for name, rows in metrics.getSeparationDistanceDiff("rcvs").items():

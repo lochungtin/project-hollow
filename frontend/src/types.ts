@@ -150,9 +150,6 @@ export type ResponseSlice = {
 }
 
 export type Axis = 'axial' | 'coronal' | 'sagittal'
-// arbitrary: a freeform plane whose normal comes from two selected contours' centers of
-// mass, not a fixed lookup like the cardinal axes — kept out of `Axis` so AXIS_DU/AXIS_DV
-// (scene/scan.ts) don't need a meaningless static entry for it
 export type SliceMode = Axis | 'arbitrary'
 
 export type VisDataset = {
@@ -161,9 +158,6 @@ export type VisDataset = {
     'anchor': Vec3D,
     'outs': { [key: string]: THREE.Object3D },
     'slices': { [key: string]: THREE.Object3D },
-    // contour slice-overlay mode ("M" key): each visible contour's overlay plane
-    // ('contour:{id}') — kept separate from `slices` so setScanVisibility's sweep over the
-    // scan plane doesn't also hide/show these
     'overlays': { [key: string]: THREE.Object3D },
     'axes': THREE.Object3D | null,
 }
@@ -194,9 +188,6 @@ export type ResponseMesh = {
     'face_count': number,
 }
 
-// distance-map mesh response ("DMap" button): same shape as ResponseMesh, plus a flattened
-// [r,g,b,r,g,b,...] per-vertex color list (see backend image.py::distanceColorsFlat) to use
-// instead of `color` when rendering
 export type ResponseMeshDMap = ResponseMesh & {
     'colors': number[],
 }

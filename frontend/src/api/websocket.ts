@@ -6,10 +6,11 @@ class Socket {
   	private reconnectTimer: number | null = null
   	private closedByUser: boolean = false
 
+  	/** Opens the WebSocket connection and schedules auto-reconnect on unexpected close. */
   	connect(): void {
     	this.closedByUser = false
     	const protocol = location.protocol === 'https:' ? 'wss' : 'ws'
-		
+
     	this.ws = new WebSocket(`${protocol}://${location.host}/ws`)
     	this.ws.onmessage = (ev) => {
       		try {
@@ -17,13 +18,14 @@ class Socket {
         		this.listeners.forEach((l) => l(msg))
       		} catch {}
     	}
-    
+
 		this.ws.onclose = () => {
       		if (!this.closedByUser)
 				this.reconnectTimer = window.setTimeout(() => this.connect(), 1500)
 		}
   	}
 
+  	/** Registers a message listener and returns a function to unsubscribe it. */
   	subscribe(fn: Listener): () => void {
     	this.listeners.push(fn)
     	return () => {
@@ -31,6 +33,7 @@ class Socket {
     	}
   	}
 
+  	/** Closes the connection and suppresses further auto-reconnect attempts. */
   	close(): void {
     	this.closedByUser = true
     	if (this.reconnectTimer !== null)

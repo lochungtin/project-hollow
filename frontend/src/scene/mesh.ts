@@ -3,12 +3,8 @@ import { ResponseMesh } from '../types'
 import { toWorld } from './coords'
 
 
+/** Builds a `BufferGeometry` from a backend mesh response, routing vertices through `toWorld`, with optional baked per-vertex colors (DMap mode). */
 export function bufferGeom(mesh: ResponseMesh, colors?: number[]): THREE.BufferGeometry {
-	// backend vertices are in raw DICOM patient space (mm) — every other object in the
-	// scene (slice planes, axes, anchor math) is routed through toWorld() before being
-	// handed to Three.js, so this needs the same remap or it renders in a sheared,
-	// mismatched frame relative to everything else (toWorld is a proper rotation, so face
-	// winding/normals stay valid without needing to reverse index order)
 	const src = mesh.vertices
 	const positions = new Float32Array(src.length)
 	for (let i = 0; i < src.length; i += 3) {
@@ -23,8 +19,6 @@ export function bufferGeom(mesh: ResponseMesh, colors?: number[]): THREE.BufferG
 	geometry.setIndex(new THREE.BufferAttribute(new Uint32Array(mesh.faces), 1))
 	geometry.computeVertexNormals()
 
-	// distance-map mode ("DMap" button): per-vertex color baked server-side (see backend
-	// image.py::distanceColorsFlat), 0-255 ints normalized to Three.js's expected 0-1 range
 	if (colors) {
 		const colorAttr = new Float32Array(colors.length)
 		for (let i = 0; i < colors.length; i++)
@@ -35,6 +29,7 @@ export function bufferGeom(mesh: ResponseMesh, colors?: number[]): THREE.BufferG
 	return geometry
 }
 
+/** Renders a contour as an opaque, front-facing surface mesh. */
 export const renderFull = (
 	mesh: ResponseMesh,
 	color: [number, number, number],
@@ -43,8 +38,6 @@ export const renderFull = (
 ): THREE.Mesh  => {
 	const geometry = bufferGeom(mesh, vertexColors)
 	const material = new THREE.MeshStandardMaterial({
-		// vertex colors multiply the material's base color, so use white when they're
-		// present to avoid tinting them with the (now-unused) flat contour color
 		color: vertexColors ? new THREE.Color(1, 1, 1) : new THREE.Color(color[0] / 255, color[1] / 255, color[2] / 255),
 		vertexColors: !!vertexColors,
 		transparent: opacity < 1,
@@ -59,6 +52,7 @@ export const renderFull = (
 	return m
 }
 
+/** Renders a contour as a transparent, double-sided, depth-write-off surface mesh. */
 export const renderPartial = (
 	mesh: ResponseMesh,
 	color: [number, number, number],

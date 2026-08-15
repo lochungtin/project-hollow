@@ -15,7 +15,7 @@ const ContentEmpty = ({ slot }: { slot: string }) => {
 
     const state = useAppState()
 
-    // --- UPLOAD DICOM FILES
+    /** Opens the hidden DICOM file input, unless an upload is already in progress. */
     const _onClickDcmUpload = (e: React.MouseEvent, slot: string) => {
         console.log('_onDCMClickUpload', slot)
 
@@ -25,6 +25,7 @@ const ContentEmpty = ({ slot }: { slot: string }) => {
         if (dicomUploadRef.current)
             dicomUploadRef.current.click()
     }
+    /** Uploads the selected DICOM files and resets the file input. */
     const _onDcmUpload = (e: any, slot: string) => {
         console.log('_onDCMUpload', slot, e.target.files.length)
 
@@ -68,7 +69,7 @@ const ContentLoaded = ({ slot }: { slot: string }) => {
     const shape = scan.shape.join(' x ')
     const spacing = scan.spacing.map((x: number) => x.toFixed(2)).join(' x ')
 
-    // --- UPLOAD RT STRUCT FILES
+    /** Opens the hidden RTSTRUCT file input, unless an upload is already in progress. */
     const _onClickRTStructUpload = (e: React.MouseEvent, slot: string) => {
         console.log('_onRTStructClickUpload', slot)
 
@@ -78,6 +79,7 @@ const ContentLoaded = ({ slot }: { slot: string }) => {
         if (structUploadRef.current)
             structUploadRef.current.click()
     }
+    /** Uploads the selected RTSTRUCT file and resets the file input. */
     const _onRTStructUpload = (e: React.ChangeEvent<HTMLInputElement>, slot: string) => {
         console.log('_onRTStructUpload', slot, e.target.files?.length)
 
@@ -86,12 +88,7 @@ const ContentLoaded = ({ slot }: { slot: string }) => {
         e.target.value = ''
     }
 
-    // Anchor (mm/px) fields edit `alignment` — where the currently-pinned anchor point sits,
-    // relative to world origin (the fixed axes intersection). (0, 0, 0) means the anchor
-    // point sits exactly on world origin; the axes never move, only the dataset does.
-    // px = mm / spacing (spacing is mm per voxel).
-
-    // --- ANCHOR CHANGES MM
+    /** Updates the local anchor MM field as the user types, without committing to the server. */
     const _onAnchorMMChange = (e: React.ChangeEvent<HTMLInputElement>, slot: string, axes: number) => {
         console.log('_onAnchorMMChange', slot, axes, e.target.value)
 
@@ -99,6 +96,7 @@ const ContentLoaded = ({ slot }: { slot: string }) => {
         temp[axes] = parseFloat(e.target.value)
         state.updateLocalAnchorMM(slot, temp)
     }
+    /** Commits the anchor MM field on blur and syncs the derived PX field. */
     const _onAnchorMMBlur = (e: React.ChangeEvent<HTMLInputElement>, slot: string, axes: number) => {
         console.log('_onAnchorMMBlur', slot, axes, e.target.value)
 
@@ -110,7 +108,7 @@ const ContentLoaded = ({ slot }: { slot: string }) => {
         state.updateLocalAnchorPX(slot, converted)
     }
 
-    // --- ANCHOR CHANGES PX
+    /** Updates the local anchor PX field as the user types, without committing to the server. */
     const _onAnchorPXChange = (e: React.ChangeEvent<HTMLInputElement>, slot: string, axes: number) => {
         console.log('_onAnchorPXChange', slot, axes, e.target.value)
 
@@ -118,6 +116,7 @@ const ContentLoaded = ({ slot }: { slot: string }) => {
         temp[axes] = parseFloat(e.target.value)
         state.updateLocalAnchorPX(slot, temp)
     }
+    /** Commits the anchor PX field on blur and syncs the derived MM field. */
     const _onAnchorPXBlur = (e: React.ChangeEvent<HTMLInputElement>, slot: string, axes: number) => {
         console.log('_onAnchorPXBlur', slot, axes)
 
@@ -129,38 +128,42 @@ const ContentLoaded = ({ slot }: { slot: string }) => {
         state.updateLocalAnchorMM(slot, converted)
     }
 
-    // --- ALIGNMENT UPDATE (translate the dataset relative to world origin)
+    /** Pushes the locally-edited anchor MM fields to the server as the new alignment. */
     const _onClickAnchorSet = (e: React.MouseEvent, slot: string) => {
         console.log('_onClickAnchorUpdate', slot, state.localAnchorMM[slot])
 
         state.updateAlignment(slot, state.localAnchorMM[slot])
     }
 
-    // --- CONTOUR ACTIONS
+    /** Toggles a contour's visibility. */
     const _onClickContour = (e: React.MouseEvent, slot: string, id: string) => {
         console.log('_onClickContour', slot, id)
+
         const current = state.dataset[slot]?.contours[id].visible
         state.updateVisibility(slot, 'contour', !current, id)
     }
+    /** Sets a contour's center of mass as the dataset's anchor. */
     const _onClickContourAnchor = (e: React.MouseEvent, slot: string, id: string) => {
         console.log('_onClickContourAnchor', slot, id)
 
         const current = (state.dataset[slot] as Dataset).contours[id].center_of_mass
         state.updateAnchor(slot, current, id)
     }
+    /** Sets a contour as the dataset's GUAVA target. */
     const _onClickContourTarget = (e: React.MouseEvent, slot: string, id: string) => {
         console.log('_onClickContourTarget', slot, id)
 
         state.updateTarget(slot, id)
     }
+    /** Toggles a contour in/out of the arbitrary-axis selection. */
     const _onClickContourSelect = (e: React.MouseEvent, slot: string, id: string) => {
         console.log('_onClickContourSelect', slot, id)
-        
+
         state.toggleContourSelect(slot, id)
     }
+    /** Toggles a contour in/out of distance-map rendering mode. */
     const _onClickContourDMap = (e: React.MouseEvent, slot: string, id: string) => {
         console.log('_onClickContourDMap', slot, id)
-        e.stopPropagation()
 
         state.toggleContourDMap(slot, id)
     }
@@ -238,9 +241,6 @@ const ContentLoaded = ({ slot }: { slot: string }) => {
                     else if (state.selected.length > 0)
                         selectDecorator = 'info-contour-action-img-unselected'
 
-                    // DMap needs a target to compute a distance map against at all (backend
-                    // 400s otherwise), and the target has no meaningful distance map of
-                    // itself (~0 everywhere inside its own mask) — disable accordingly
                     const dmapDisabled = ds.targetID === 'unknown' || c.id === ds.targetID
 
                     let dmapDecorator = ''
@@ -286,7 +286,7 @@ const Card = ({ slot }: { slot: string }) => {
     const ds = state.dataset[slot]
     const visible = ds?.scan?.visible
 
-    // --- TOGGLE VISIBILITY
+    /** Toggles the slot's scan visibility. */
     const _onClickVisible = (e: React.MouseEvent, slot: string) => {
         console.log('_onClickVisible', slot)
 
@@ -294,7 +294,7 @@ const Card = ({ slot }: { slot: string }) => {
             state.updateVisibility(slot, 'scan', !visible)
     }
 
-    // --- CLOSE
+    /** Deletes the slot's dataset. */
     const _onClickClose = (e: React.MouseEvent, slot: string) => {
         console.log('_onClickClose', slot)
 

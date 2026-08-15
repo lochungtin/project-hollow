@@ -5,10 +5,6 @@ import numpy as np
 from .contour import Contour
 from .scan import Scan
 
-# from .distance_map import DistanceMap
-# from .surface import Surface
-# from .volume import Volume
-
 
 @dataclass
 class Dataset:
@@ -20,10 +16,6 @@ class Dataset:
     alignment: np.ndarray = field(default_factory=lambda: np.zeros(3, float))
     contours: dict[str, Contour] = field(default_factory=dict)
     rotation: np.ndarray = field(default_factory=lambda: np.zeros(3, float))
-
-    # surfaces: dict[str, Surface] = {}
-    # distance_maps: dict[str, DistanceMap] = {}
-    # volume_mesh_cache: dict[float, Mesh] = {}
 
     def __post_init__(self):
         z, y, x = self.scan.shape

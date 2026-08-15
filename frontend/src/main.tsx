@@ -1,4 +1,3 @@
-// import React from 'react'
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import type { } from '@mui/x-charts/themeAugmentation';
 import ReactDOM from 'react-dom/client';
@@ -38,10 +37,8 @@ if (!rootElement)
 
 ReactDOM.createRoot(rootElement).render(
 	<ThemeProvider theme={theme}>
-		{/* <React.StrictMode> */}
 		<AppStateProvider>
 			<App />
 		</AppStateProvider>
-		{/* </React.StrictMode> */}
 	</ThemeProvider>
 )

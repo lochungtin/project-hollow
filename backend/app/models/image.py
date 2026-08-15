@@ -1,10 +1,17 @@
 import base64
 from dataclasses import dataclass
 from io import BytesIO
+from typing import Literal
 
 import numpy as np
 from PIL import Image
 from scipy.ndimage import binary_erosion, map_coordinates
+
+from .scan import Scan
+
+Vec3 = tuple[float, float, float]
+Axis = Literal["axial", "coronal", "sagittal"]
+Color = tuple[int, int, int]
 
 
 @dataclass
@@ -27,7 +34,8 @@ class Slice:
         }
 
 
-def _orthogonalGeometry(scan, ax, idx):
+def _orthogonalGeometry(scan: Scan, ax: Axis, idx: int) -> tuple[int, Vec3, Vec3, Vec3, float, float]:
+    """Compute a cardinal-axis slice's clamped index, center, dU/dV, and in-plane dimensions."""
     z, y, x = scan.shape
     sZ, sY, sX = scan.spacing
     oX, oY, oZ = scan.origin
@@ -57,7 +65,8 @@ def _orthogonalGeometry(scan, ax, idx):
     return idx, c, dU, dV, dims[0], dims[1]
 
 
-def _orthogonalSlice(array, ax, idx):
+def _orthogonalSlice(array: np.ndarray, ax: Axis, idx: int) -> np.ndarray:
+    """Index a 3D array along the given cardinal axis at `idx`."""
     if ax == "axial":
         return array[idx, :, :]
     elif ax == "coronal":
@@ -66,57 +75,49 @@ def _orthogonalSlice(array, ax, idx):
         return array[:, :, idx]
 
 
-def orthogonal(scan, ax, idx):
+def orthogonal(scan: Scan, ax: Axis, idx: int) -> Slice:
+    """Extract a grayscale cardinal-axis slice of the scan as a `Slice`."""
     idx, c, dU, dV, width, height = _orthogonalGeometry(scan, ax, idx)
     img = _orthogonalSlice(scan.array, ax, idx)
     return Slice(url=toURL(img), center=c, dU=dU, dV=dV, width=width, height=height)
 
 
-# Cross-section of a contour's boolean mask (same shape/spacing/origin as scan.array — see
-# parser.toContourObjs) along the same cardinal axis/index as a scan slice, rendered as a
-# transparent-background colored overlay instead of a grayscale image.
-def orthogonalMask(scan, mask, color, ax, idx):
+def orthogonalMask(scan: Scan, mask: np.ndarray, color: Color, ax: Axis, idx: int) -> Slice:
+    """Extract a cardinal-axis cross-section of a boolean mask as a flat-colored `Slice`."""
     idx, c, dU, dV, width, height = _orthogonalGeometry(scan, ax, idx)
     img = _orthogonalSlice(mask, ax, idx)
-    return Slice(url=maskToURL(img, color), center=c, dU=dU, dV=dV, width=width, height=height)
+    return Slice(
+        url=maskToURL(img, color), center=c, dU=dU, dV=dV, width=width, height=height
+    )
 
 
-def _orthonormalBasis(normal):
+def _orthonormalBasis(normal: Vec3) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Build an orthonormal (normal, u, v) frame for an arbitrary slicing plane."""
     n = np.asarray(normal, dtype=float)
     norm = np.linalg.norm(n)
     n = n / norm if norm > 1e-9 else np.array([0.0, 0.0, 1.0])
-
-    # `v` (dV) is derived to match the established cardinal convention (axial=(0,-1,0),
-    # coronal/sagittal=(0,0,-1)) generalized to any orientation, not an arbitrary helper
-    # cross-product — project a fixed "up" reference onto the plane, falling back to the
-    # same secondary reference axial itself uses when the plane is too close to axial (SI)
-    # for SI to serve as an in-plane "up" direction. This exactly reproduces the established
-    # dV at all three cardinal normals (verified: e.g. normal=(0,1,0) -> v=(0,0,-1)).
     ref = np.array([0.0, -1.0, 0.0]) if abs(n[2]) > 0.9 else np.array([0.0, 0.0, -1.0])
     v = ref - np.dot(ref, n) * n
     v = v / np.linalg.norm(v)
-    u = np.cross(v, n)  # keeps cross(u, v) == n, matching the front-facing convention
+    u = np.cross(v, n)
     return n, u, v
 
 
-def _arbitraryDim(scan):
+def _arbitraryDim(scan: Scan) -> tuple[int, float]:
+    """Return the arbitrary-slice image's pixel dimension and isotropic spacing."""
     z, y, x = scan.shape
     sZ, sY, sX = scan.spacing
-    spacing = float(sX)  # isometric after resample (parser._resample)
+    spacing = float(sX)
 
     shX, shY, shZ = (x - 1) * sX, (y - 1) * sY, (z - 1) * sZ
     diag = float(np.sqrt(shX**2 + shY**2 + shZ**2))
     return max(2, int(round(diag / spacing))), spacing
 
 
-# Sample-coordinate grid for an arbitrary-orientation plane through `anchor` (absolute
-# patient-space mm — the point that maps to world origin), offset along `normal` by `idx`
-# isometric-voxel steps. `dim` is sized to the volume's bounding-box diagonal so the whole
-# scan is covered regardless of the plane's orientation, matching how the frontend
-# independently derives the same bound for scroll limits/black-frame placeholders (see
-# scene/scan.ts::arbitrarySliceGeometry) without a round-trip. Shared by arbitrary() and
-# arbitraryMask() — the coordinate grid itself doesn't depend on which array gets sampled.
-def _arbitraryGrid(scan, anchor, normal, idx):
+def _arbitraryGrid(
+    scan: Scan, anchor: Vec3, normal: Vec3, idx: int
+) -> tuple[tuple[np.ndarray, np.ndarray, np.ndarray], np.ndarray, np.ndarray, np.ndarray, float]:
+    """Build the voxel-index sampling grid for an arbitrary-orientation plane through `anchor`."""
     n, u, v = _orthonormalBasis(normal)
     dim, spacing = _arbitraryDim(scan)
     oX, oY, oZ = scan.origin
@@ -125,15 +126,8 @@ def _arbitraryGrid(scan, anchor, normal, idx):
     center = np.asarray(anchor, dtype=float) + n * idx * spacing
 
     coords = (np.arange(dim) - (dim - 1) / 2.0) * spacing
-    rr, cc = np.meshgrid(coords, coords, indexing="ij")  # rr: rows, cc: dU (cols)
+    rr, cc = np.meshgrid(coords, coords, indexing="ij")
 
-    # rows sample along -v, not +v: row 0 of the array becomes the *top* of the saved PNG
-    # (PIL convention), which — after the texture's vertical flip and the plane mesh's own
-    # UV layout — ends up mounted at world direction +v (dV). Sampling row-increasing along
-    # -v keeps that mounted content anatomically correct instead of mirrored across "up".
-    # This matches the cardinal axes: e.g. axial's array row axis increases along +Y while
-    # its reported dV is -Y — dV is always the negation of the array's row-increasing
-    # direction, not the same direction.
     px = center[0] + cc * u[0] - rr * v[0]
     py = center[1] + cc * u[1] - rr * v[1]
     pz = center[2] + cc * u[2] - rr * v[2]
@@ -146,7 +140,8 @@ def _arbitraryGrid(scan, anchor, normal, idx):
     return (ptsZ, ptsY, ptsX), center, u, v, extent
 
 
-def arbitrary(scan, anchor, normal, idx):
+def arbitrary(scan: Scan, anchor: Vec3, normal: Vec3, idx: int) -> Slice:
+    """Extract a grayscale arbitrary-orientation slice of the scan as a `Slice`."""
     pts, center, u, v, extent = _arbitraryGrid(scan, anchor, normal, idx)
 
     sampled = map_coordinates(
@@ -167,20 +162,20 @@ def arbitrary(scan, anchor, normal, idx):
     )
 
 
-# Arbitrary-orientation cross-section of a contour's boolean mask, positioned identically to
-# arbitrary() (same _arbitraryGrid call) so the overlay lines up pixel-for-pixel with the
-# scan slice it's drawn on top of. order=0 (nearest) instead of arbitrary()'s order=1
-# (linear) — the source is boolean and shouldn't blur into fractional values at edges.
-def arbitraryMask(scan, mask, color, anchor, normal, idx):
+def arbitraryMask(scan: Scan, mask: np.ndarray, color: Color, anchor: Vec3, normal: Vec3, idx: int) -> Slice:
+    """Extract an arbitrary-orientation cross-section of a boolean mask as a flat-colored `Slice`."""
     pts, center, u, v, extent = _arbitraryGrid(scan, anchor, normal, idx)
 
-    sampled = map_coordinates(
-        mask.astype(np.uint8),
-        pts,
-        order=0,
-        mode="constant",
-        cval=0,
-    ) > 0
+    sampled = (
+        map_coordinates(
+            mask.astype(np.uint8),
+            pts,
+            order=0,
+            mode="constant",
+            cval=0,
+        )
+        > 0
+    )
 
     return Slice(
         url=maskToURL(sampled, color),
@@ -192,7 +187,8 @@ def arbitraryMask(scan, mask, color, anchor, normal, idx):
     )
 
 
-def toURL(arr):
+def toURL(arr: np.ndarray) -> str:
+    """Encode a 2D grayscale array as a min-max-normalized base64 PNG data URL."""
     mn, mx = float(arr.min()), float(arr.max())
     if mx - mn < 1e-6:
         norm = np.zeros_like(arr, np.uint8)
@@ -205,11 +201,8 @@ def toURL(arr):
     return rt
 
 
-# Transparent-background colored overlay for a 2D boolean mask: interior at 0.4 opacity,
-# a one-voxel boundary ring (mask minus its erosion, same technique guava_rt.Mask.surface()
-# uses in 3D) at 0.6 opacity, fully transparent everywhere else. A mask with no True pixels
-# (contour doesn't intersect this slice) naturally produces an all-transparent image.
-def maskToURL(mask, color):
+def maskToURL(mask: np.ndarray, color: Color) -> str:
+    """Encode a boolean mask as a transparent PNG, flat-colored with a brighter boundary ring."""
     mask = np.asarray(mask, dtype=bool)
     boundary = mask & ~binary_erosion(mask)
     interior = mask & ~boundary
@@ -224,11 +217,8 @@ def maskToURL(mask, color):
     return rt
 
 
-# --- Distance-map visualization ("DMap" button)
-# Red (small values) -> blue (large values), passing through purple at the midpoint since
-# red and blue are both partially present there — a direct, literal reading of "red small,
-# blue large" rather than a borrowed perceptual colormap.
-def _distanceColor(t):
+def _distanceColor(t: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Map normalized values in [0, 1] to an RGB red(small)->blue(large) colormap."""
     t = np.clip(t, 0.0, 1.0)
     r = ((1.0 - t) * 255.0).astype(np.uint8)
     b = (t * 255.0).astype(np.uint8)
@@ -236,16 +226,15 @@ def _distanceColor(t):
     return r, g, b
 
 
-def _normalize(values, vmin, vmax):
+def _normalize(values: np.ndarray, vmin: float, vmax: float) -> np.ndarray:
+    """Linearly rescale `values` from `[vmin, vmax]` to `[0, 1]`, clipped, with a flat-range guard."""
     if vmax - vmin < 1e-6:
         return np.zeros_like(values, dtype=np.float64)
     return np.clip((values - vmin) / (vmax - vmin), 0.0, 1.0)
 
 
-# fieldToURL is maskToURL's distance-map counterpart: same interior/boundary alpha split,
-# but RGB comes from the colormap above evaluated per-pixel on `field`, instead of a flat
-# `color` tuple.
-def fieldToURL(mask, field, vmin, vmax):
+def fieldToURL(mask: np.ndarray, field: np.ndarray, vmin: float, vmax: float) -> str:
+    """Encode a boolean mask as a transparent PNG colored per-pixel by `field` via `_distanceColor`."""
     mask = np.asarray(mask, dtype=bool)
     boundary = mask & ~binary_erosion(mask)
     interior = mask & ~boundary
@@ -265,26 +254,33 @@ def fieldToURL(mask, field, vmin, vmax):
     return rt
 
 
-# Cardinal-axis distance-map cross-section: `field` (a full-volume scalar array, same shape
-# as `mask`/scan.array) sliced identically to `mask`, colorized via fieldToURL instead of a
-# flat contour color. `vmin`/`vmax` are passed in (computed by the caller from the full 3D
-# masked field) rather than recomputed per-slice, so the color scale stays fixed as the user
-# scrolls instead of renormalizing every frame.
-def orthogonalScalarMask(scan, mask, field, vmin, vmax, ax, idx):
+def orthogonalScalarMask(
+    scan: Scan, mask: np.ndarray, field: np.ndarray, vmin: float, vmax: float, ax: Axis, idx: int
+) -> Slice:
+    """Extract a cardinal-axis cross-section of a mask, colored by a scalar `field`, as a `Slice`."""
     idx, c, dU, dV, width, height = _orthogonalGeometry(scan, ax, idx)
     maskImg = _orthogonalSlice(mask, ax, idx)
     fieldImg = _orthogonalSlice(field, ax, idx)
-    return Slice(url=fieldToURL(maskImg, fieldImg, vmin, vmax), center=c, dU=dU, dV=dV, width=width, height=height)
+    return Slice(
+        url=fieldToURL(maskImg, fieldImg, vmin, vmax),
+        center=c,
+        dU=dU,
+        dV=dV,
+        width=width,
+        height=height,
+    )
 
 
-# Arbitrary-orientation counterpart to orthogonalScalarMask, positioned identically to
-# arbitraryMask/arbitrary() (same _arbitraryGrid call). The mask is sampled with order=0
-# (nearest) like arbitraryMask, the scalar field with order=1 (linear) like arbitrary() uses
-# for the grayscale scan.
-def arbitraryScalarMask(scan, mask, field, vmin, vmax, anchor, normal, idx):
+def arbitraryScalarMask(
+    scan: Scan, mask: np.ndarray, field: np.ndarray, vmin: float, vmax: float, anchor: Vec3, normal: Vec3, idx: int
+) -> Slice:
+    """Extract an arbitrary-orientation cross-section of a mask, colored by a scalar `field`."""
     pts, center, u, v, extent = _arbitraryGrid(scan, anchor, normal, idx)
 
-    maskSampled = map_coordinates(mask.astype(np.uint8), pts, order=0, mode="constant", cval=0) > 0
+    maskSampled = (
+        map_coordinates(mask.astype(np.uint8), pts, order=0, mode="constant", cval=0)
+        > 0
+    )
     fieldSampled = map_coordinates(field, pts, order=1, mode="nearest")
 
     return Slice(
@@ -297,11 +293,8 @@ def arbitraryScalarMask(scan, mask, field, vmin, vmax, anchor, normal, idx):
     )
 
 
-# Interpolated lookup of a full-volume scalar field (e.g. a distance map) at a mesh's own
-# vertices. Mesh vertices are already in patient-space mm (see models/mesh.py::Mesh.fromArr);
-# this inverts that same origin/spacing mapping back to fractional voxel indices instead of
-# touching marching-cubes internals.
-def sampleField(scan, field, verticesMM):
+def sampleField(scan: Scan, field: np.ndarray, verticesMM: np.ndarray) -> np.ndarray:
+    """Interpolate a scalar volume `field` at a mesh's patient-space mm vertices."""
     verts = np.asarray(verticesMM, dtype=np.float64).reshape(-1, 3)
     oX, oY, oZ = scan.origin
     sZ, sY, sX = scan.spacing
@@ -313,9 +306,8 @@ def sampleField(scan, field, verticesMM):
     return map_coordinates(field, [idxZ, idxY, idxX], order=1, mode="nearest")
 
 
-# Per-vertex color payload for the 3D DMap mesh response: flattened [r,g,b,r,g,b,...] to
-# align 1:1 with Mesh.summary()'s flattened `vertices` list.
-def distanceColorsFlat(values, vmin, vmax):
+def distanceColorsFlat(values: np.ndarray, vmin: float, vmax: float) -> list[int]:
+    """Colorize `values` via `_distanceColor` into a flattened per-vertex `[r, g, b, ...]` list."""
     r, g, b = _distanceColor(_normalize(np.asarray(values), vmin, vmax))
     colors = np.empty(r.size * 3, dtype=np.uint8)
     colors[0::3] = r

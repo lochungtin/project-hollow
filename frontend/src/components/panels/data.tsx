@@ -14,6 +14,7 @@ const FALLBACK_TEXT = [
     'Process requries both target structures to be set.'
 ]
 
+/** Builds a row/column table of a numeric contour field (volume/surface_area) compared between datasets A and B. */
 const parseContoursNumDiff = (
     A: { [key: string]: Contour },
     B: { [key: string]: Contour },
@@ -79,6 +80,7 @@ const Fallback = ({ fallbackCode, fallbackMax, ready, fn, children }: {
     fn?: () => void,
     children?: React.ReactElement | React.ReactElement[]
 }) => {
+    /** Triggers the pane's job-queue callback, if provided. */
     const onClick = (e: React.MouseEvent) => {
         if (fn)
             fn()
@@ -120,6 +122,7 @@ const Table = (
             decorator?: number[]
         }
 ) => {
+    /** Updates the table's px/mm scale toggle. */
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => setScale(e.target.checked)
 
     return (<table className='data-table'>

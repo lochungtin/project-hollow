@@ -3,14 +3,15 @@ import { getArbitraryContourDMapSlice, getArbitraryContourSlice, getArbitrarySli
 import SceneManager from '../../scene/manager'
 import { arbitraryMaxIdx, arbitrarySliceGeometry, axisFrame, render, renderBlack, renderOverlay, sliceGeometry } from '../../scene/scan'
 import { useAppState } from '../../state'
-import { Axis, Contour, Scan, SliceState, Vec3D } from '../../types'
+import { Axis, Contour, SliceState, Vec3D } from '../../types'
 import './view.css'
 
 
 const AXIS_NUM_MAP: { [key: string]: Axis } = {'1': 'axial', '2': 'coronal', '3': 'sagittal'}
 const AXIS_NORM_MAP: { [key: string]: Vec3D } = {'1': [0, 0, 1], '2': [0, 1, 0], '3': [1, 0, 0]}
-const ROTATE_STEP = Math.PI / 180 // 1 degree per wheel tick
+const ROTATE_STEP = Math.PI / 180
 
+/** Builds a fresh cardinal-axis slice state centered on the given anchor. */
 const sliceState = (anchor: Vec3D): SliceState => ({
     'mode': 'axial',
     'idx': { 'axial': 0, 'coronal': 0, 'sagittal': 0 },
@@ -19,6 +20,7 @@ const sliceState = (anchor: Vec3D): SliceState => ({
 })
 
 
+/** Returns the maximum valid cardinal-axis slice index for a scan shape. */
 const getMaxIdx = (shape: Vec3D, ax: string) => {
     if (ax === 'axial')
         return shape[0] - 1
@@ -27,6 +29,7 @@ const getMaxIdx = (shape: Vec3D, ax: string) => {
     return shape[2] - 1
 }
 
+/** Normalizes a vector, falling back to +Z when it is (near) zero-length. */
 const normalizeVec = (v: Vec3D): Vec3D => {
     const len = Math.sqrt(v[0] ** 2 + v[1] ** 2 + v[2] ** 2)
     return len < 1e-6 ? [0, 0, 1] : [v[0] / len, v[1] / len, v[2] / len]
@@ -69,6 +72,7 @@ const ViewPane = () => {
         }
     }, [])
 
+    /** Fetches and renders the active scan slice for a slot (or a black placeholder if the index is out of range), then refreshes its contour overlays. */
     const refreshSlice = async(slot: string): Promise<void> => {
         const scene = refScene.current
         const ds = refState.current.dataset[slot]
@@ -80,18 +84,11 @@ const ViewPane = () => {
         const idx = slice.idx[slice.mode]
         const token = ++refOpToken.current[slot]
 
-        // arbitrary has no natural voxel-grid bound like the cardinal axes (shape[axis]-1,
-        // starting at 0) — it's centered on the anchor, so the valid range is symmetric
-        // around 0 instead, sized to the same bounding-box-diagonal bound used to size the
-        // rendered image itself (see scene/scan.ts::arbitraryMaxIdx)
         const isArbitrary = slice.mode === 'arbitrary'
         const minIdx = isArbitrary ? -arbitraryMaxIdx(ds.scan) : 0
         const maxIdx = isArbitrary ? arbitraryMaxIdx(ds.scan) : getMaxIdx(ds.scan.shape, slice.mode)
 
         try {
-            // index out of this dataset's own range (e.g. mismatched anchors/slice counts
-            // between A and B) -> render a black placeholder in the slice's would-be position
-            // instead of hitting the backend (which clamps and would return a real slice)
             if (idx < minIdx || idx > maxIdx) {
                 const geometry = slice.mode === 'arbitrary'
                     ? arbitrarySliceGeometry(ds.scan, ds.anchor, slice.normal, idx)
@@ -126,15 +123,11 @@ const ViewPane = () => {
         }
     }
 
-    // distance-map mode ("DMap" button): whether a given contour is currently shown against
-    // the target's distance map instead of its flat color, in both the 3D mesh and 2D
-    // overlay paths below
+    /** Returns whether a contour is currently shown against the target's distance map instead of its flat color. */
     const isDMap = (slot: string, id: string): boolean =>
         refState.current.dmapContours.some(s => s.slot === slot && s.id === id)
 
-    // 3D-mesh fetch+render for a single contour, shared by the contour-sync effect (new
-    // contours) and the dmap-toggle effect below (re-rendering an existing one) — branches
-    // between the flat-color and distance-map-colored mesh endpoints/renderers.
+    /** Fetches and renders a single contour's 3D mesh, branching between the flat-color and distance-map-colored endpoints. */
     const loadContourMesh = async (slot: string, contour: Contour): Promise<void> => {
         const scene = refScene.current
         if (!scene)
@@ -154,10 +147,7 @@ const ViewPane = () => {
         }
     }
 
-    // contour slice-overlay mode ("M" key): draws each visible contour's cross-section at
-    // the same idx/mode/normal as the scan slice above (own race-guard token, since this
-    // fetches per-contour and shouldn't be blocked by the scan slice's own in-flight request).
-    // A no-op (past clearing any stale overlays) whenever the mode isn't active.
+    /** Fetches and draws each visible contour's 2D cross-section at the current slice, pruning overlays for contours no longer visible; a no-op when slice-overlay mode is off. */
     const refreshContourSlices = async (slot: string): Promise<void> => {
         const scene = refScene.current
         const ds = refState.current.dataset[slot]
@@ -181,10 +171,6 @@ const ViewPane = () => {
 
         const visibleContours = inRange ? Object.values(ds.contours).filter(c => c.visible) : []
 
-        // remove only what's no longer relevant (a contour that got hidden/removed) —
-        // anything still in `liveKeys` keeps showing its previous overlay untouched until
-        // setOverlay below atomically swaps in the replacement, so contours that stay visible
-        // across a scroll tick never flash blank while their new cross-section is still in flight
         const liveKeys = new Set(visibleContours.map(c => `contour:${c.id}`))
         scene.pruneOverlays(slot, liveKeys)
 
@@ -211,15 +197,12 @@ const ViewPane = () => {
                 mesh.renderOrder = i + 1
                 scene.setOverlay(slot, `contour:${contour.id}`, mesh)
             } catch {
-                /* ignore — skip this contour's overlay */
+
             }
         }))
     }
 
-    // 'm' key + the contour-sync effect below both call this: hides/shows each already-
-    // rendered 3D contour mesh per `contour.visible && !sliceMode.current` (so slice mode
-    // hides the 3D surfaces without touching each contour's own visibility flag) and
-    // refreshes the 2D overlays to match.
+    /** Syncs each rendered contour's 3D visibility with slice-overlay mode and refreshes the 2D overlays to match. */
     const syncContourMode = (slot: string) => {
         const scene = refScene.current
         const dataset = refState.current.dataset[slot]
@@ -237,8 +220,9 @@ const ViewPane = () => {
         const container = refContainer.current
         const scene = refScene.current
         if (!container || !scene)
-            return        
+            return
 
+        /** Handles zoom (Ctrl/Cmd), camera orbit (Space), and slice-index scrolling. */
         const onWheel = (e: WheelEvent) => {
             e.preventDefault()
 
@@ -251,25 +235,16 @@ const ViewPane = () => {
             const slice = refSlice.current[slot]
             const sign = Math.sign(e.deltaY) || 1
 
-            // zooming — scroll up (sign < 0) zooms in, scroll down (sign > 0) zooms out
             if (e.ctrlKey || e.metaKey) {
                 scene.zoomCamera(sign)
                 return
             }
 
-            // rotating — orbit the camera about the axis normal to the active slot's current
-            // view (axial -> SI, coronal -> AP, sagittal -> LR). Scroll up (sign < 0) rotates
-            // clockwise, scroll down (sign > 0) rotates anticlockwise.
             if (spaceHeld.current) {
                 scene.rotateCamera(slice.normal, sign * ROTATE_STEP)
                 return
             }
 
-            // slice scrolling — advance every loaded dataset's index together (for the
-            // active axis) so indices stay in lockstep between A and B regardless of which
-            // is currently visible. Each dataset's own bounds are enforced at render time
-            // (see refreshSlice) rather than here, since clamping per-dataset here would
-            // desync the two once one runs out of slices before the other.
             const mode = slice.mode
             const loadedSlots = ['A', 'B'].filter(s => refState.current.dataset[s])
             loadedSlots.forEach(s => {
@@ -281,23 +256,19 @@ const ViewPane = () => {
             console.log(`Normal Scrolling ${sign}`)
         }
 
+        /** Handles view keybindings: camera reset/flat-view, dual mode, active-slot toggle, axis switching, arbitrary-axis slicing, and slice-overlay mode. */
         const onKeyDown = (e: KeyboardEvent) => {
-            // hold space to modify scroll behaviour
             if ((e.code === 'space' || e.key === ' ') && !spaceHeld.current) {
                 console.log('Spacebar held')
                 spaceHeld.current = true
                 return
             }
 
-            // reset camera to how it was framed on load
             if (e.key === 'o' || e.key === 'O') {
                 refScene.current?.resetCamera()
                 return
             }
 
-            // snap camera to a flat, face-on view of the active slot's current slice plane.
-            // Guarded against focused text inputs (e.g. the anchor fields) since Enter is
-            // also how those get submitted.
             if (e.key === 'Enter') {
                 const tag = (document.activeElement as HTMLElement | null)?.tagName
                 if (tag === 'INPUT' || tag === 'TEXTAREA')
@@ -312,30 +283,18 @@ const ViewPane = () => {
                 return
             }
 
-            // dual mode — render both slots' contours together, scans hidden.
-            // Contour visibility is untouched either way.
             if (e.key === 'd') {
                 e.preventDefault()
                 dualMode.current = true
                 refScene.current?.setDualMode(true)
 
-                // scene.setDualMode only hides the scan meshes currently in the scene —
-                // refreshSlice (e.g. on scroll) stamps mesh.visible from dataset.scan.visible
-                // on every newly created mesh, so without actually flipping that (the same
-                // action onClickVisible in info.tsx performs) a scroll would bring it right
-                // back. Force it off, same call, both loaded slots.
                 const loadedSlots = ['A', 'B'].filter(s => refState.current.dataset[s])
                 loadedSlots.forEach(s => refState.current.updateVisibility(s, 'scan', false))
 
-                // in slice mode, both slots' overlays need to sync immediately rather than
-                // waiting on the updateVisibility calls above to round-trip (or the next
-                // scroll) — dual mode's whole point is seeing both at once right away
                 loadedSlots.forEach(s => syncContourMode(s))
                 return
             }
 
-            // toggle active slot — while in dual mode, Tab instead exits back to slot A only
-            // (scans are left hidden; the visibility toggle in the info panel still works)
             if (e.key === 'Tab') {
                 e.preventDefault()
 
@@ -353,9 +312,6 @@ const ViewPane = () => {
                 return
             }
 
-            // toggle cardinal axis — applied to every loaded dataset (not just the active
-            // one) so their slice indices stay comparable across slots, matching the wheel
-            // scrolling behaviour above
             if (e.key === '1' || e.key === '2' || e.key === '3') {
                 console.log(`Axis change: ${e.key}`)
 
@@ -372,11 +328,6 @@ const ViewPane = () => {
                 return
             }
 
-            // arbitrary axis slicing — only activates with exactly two contours selected
-            // (see info.tsx's select button / state.selected). The normal is the direction
-            // between their centers of mass; the plane passes through each slot's own anchor
-            // (the point that maps to world origin), matching how the cardinal axes are also
-            // computed per-slot but share one normal/mode across both loaded slots.
             if (e.key === '4') {
                 const sel = refState.current.selected
                 if (sel.length !== 2)
@@ -393,9 +344,6 @@ const ViewPane = () => {
                 if (loadedSlots.length === 0)
                     return
 
-                // size the visual axis line to whichever loaded dataset is active (falling
-                // back to the other) — same bounding-box-diagonal extent the arbitrary slice
-                // itself is sized to (see scene/scan.ts::arbitrarySliceGeometry)
                 const refSlot = loadedSlots.includes(refActiveSlot.current) ? refActiveSlot.current : loadedSlots[0]
                 const refDs = refState.current.dataset[refSlot]
                 if (!refDs)
@@ -413,9 +361,6 @@ const ViewPane = () => {
                 return
             }
 
-            // contour slice-overlay mode — swap the 3D contour surfaces for a 2D overlay
-            // drawn onto the current slice plane (cardinal or arbitrary), on both loaded
-            // slots so switching the active slot doesn't leave one behind in the other mode.
             if (e.key === 'm') {
                 sliceMode.current = !sliceMode.current
                 const loadedSlots = ['A', 'B'].filter(s => refState.current.dataset[s])
@@ -424,6 +369,7 @@ const ViewPane = () => {
             }
         }
 
+        /** Clears the space-held rotate modifier on release. */
         const onKeyUp = (e: KeyboardEvent) => {
             if ((e.code === 'space' || e.key === ' ') && spaceHeld.current)
                 console.log('Spacebar released')
@@ -462,8 +408,6 @@ const ViewPane = () => {
             }
             scene.setDatasetTrans(slot, dataset.anchor, dataset.alignment, dataset.render.rotation)
             scene.setScanVisibility(slot, dataset.scan.visible)
-            // covers anchor/alignment/rotation/visibility-only changes — refreshSlice below
-            // covers new-scan-load
             refreshContourSlices(slot)
 
             if (refScanID.current[slot] !== dataset.scan.id) {
@@ -479,9 +423,6 @@ const ViewPane = () => {
                     'sagittal': Math.floor((x - 1) / 2),
                 }
 
-                // the anchor point always maps to world origin (see setDatasetTrans), which
-                // is also where the axes are centered — so the camera should target origin,
-                // not the dataset's raw (absolute patient-space) anchor coordinate
                 scene.setCamera([0, 0, 0], Math.max(x * sX, y * sY, z * sZ) / 2)
 
                 scene.setAxes(slot, [
@@ -515,7 +456,7 @@ const ViewPane = () => {
             const dataset = state.dataset[slot]
             const contours = Object.values(dataset?.contours ?? {})
             const liveIDs = new Set(contours.map(contour => contour.id))
-            
+
             contours.forEach(contour => {
                 if (!scene.rendered(slot, contour.id)) {
                     loadContourMesh(slot, contour).then(() => syncContourMode(slot))
@@ -528,16 +469,10 @@ const ViewPane = () => {
                 rm.forEach((id) => scene.removeContour(slot, id))
             }
 
-            // handles visibility toggles on already-rendered contours, and refreshes the
-            // 2D overlays if slice mode is active (new contour add/remove is handled above,
-            // then re-synced again once each fetch resolves)
             syncContourMode(slot)
         })
     }, [JSON.stringify(state.dataset['A']?.contours), JSON.stringify(state.dataset['B']?.contours)])
 
-    // distance-map mode toggle ("DMap" button, info.tsx): re-render every already-rendered
-    // contour's 3D mesh (flat color <-> distance-map vertex colors require different
-    // geometry/material, not just a visibility flip) and refresh 2D overlays to match
     useEffect(() => {
         const scene = refScene.current
         if (!scene)
