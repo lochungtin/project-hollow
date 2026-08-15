@@ -2,13 +2,16 @@ import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import Terminal from 'vite-plugin-terminal';
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   plugins: [
     react(),
-    Terminal({
+    // dev-only: forwards browser console logs to the terminal running `vite dev`.
+    // Its transformIndexHtml hook injects a dev-server-only virtual-module URL that
+    // Rollup can't resolve during `vite build`, so it must not run for production builds.
+    ...(command === 'serve' ? [Terminal({
       console: 'terminal',
       output: ['terminal', 'console']
-    })
+    })] : [])
   ],
   server: {
     proxy: {
@@ -23,4 +26,4 @@ export default defineConfig({
     outDir: 'dist',
     chunkSizeWarningLimit: 2000,
   },
-})
+}))
