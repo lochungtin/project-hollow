@@ -110,15 +110,23 @@ const orientPlane = (mesh: THREE.Mesh, slice: Omit<ResponseSlice, 'url'>) => {
 // the camera to a flat, face-on view of the current slice (see SceneManager.setOrthogonalView)
 export const axisFrame = (ax: Axis): { normal: THREE.Vector3, up: THREE.Vector3 } => {
     const { v, normal } = planeBasis(AXIS_DU[ax], AXIS_DV[ax])
+    const flippedNormal = normal.multiplyScalar(-1)
+
+    // Axial: the raw basis puts the camera below looking up (Inferior). We want the camera
+    // on the opposite pole (Superior, looking down) but with Posterior still ending up on
+    // the *bottom* of the screen (Anterior on top) — so only the pole (normal) flips here,
+    // not up. (Per the note below, flipping only one of normal/up — not both — mirrors
+    // left/right relative to the flat slice plane's own u/right convention; this is a
+    // deliberate, requested trade of that consistency for keeping Anterior up.)
+    if (ax === 'axial')
+        return { normal: flippedNormal, up: v }
 
     // coronal/sagittal's raw plane basis has "up" pointing Inferior, not Superior. Viewing
-    // from the opposite side (-normal) with up flipped too (-v) reads as a 180° rotation
-    // about the horizontal (u) axis: Superior ends up on top and left/right is unaffected,
-    // since screen-right stays === u either way (axial isn't affected — its up axis is AP,
-    // not SI, so there's nothing to flip there).
-    if (ax === 'coronal' || ax === 'sagittal')
-        return { normal: normal.multiplyScalar(-1), up: v.multiplyScalar(-1) }
-    return { normal, up: v }
+    // from the opposite side (-normal) with up flipped too (-v) is a 180° rotation about the
+    // horizontal (u/right) axis — screen-right stays === u either way (flipping only one of
+    // normal/up, not both, is what would mirror left/right: Three.js's own lookAt basis has
+    // right = up × normal, which only stays fixed when both negate together).
+    return { normal: flippedNormal, up: v.multiplyScalar(-1) }
 }
 
 export const render = (slice: ResponseSlice): Promise<THREE.Mesh> => new Promise((res, rej) => {
