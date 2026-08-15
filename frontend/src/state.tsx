@@ -4,13 +4,13 @@ import { socket } from './api/websocket'
 import { AppState, Dataset, Job, ResponseDiVHSingle, ResultStore, SelectedContour } from './types'
 
 /** Derives the anchor MM/PX display fields from a dataset's alignment and voxel spacing. */
-const localAnchorFromAlignment = (alignment: number[], spacing: number[]) => ({
+const _localAnchorFromAlignment = (alignment: number[], spacing: number[]) => ({
     mm: alignment.map((v: number) => Math.round(v)),
     px: alignment.map((v: number, i: number) => Math.round(v / spacing[i])),
 })
 
 /** Returns an empty GUAVA result store, matching the server's post-invalidation shape. */
-const emptyResults = (): ResultStore => ({ bsd: {}, disp: {}, sepd: {}, divh: [], sepdn: {} })
+const _emptyResults = (): ResultStore => ({ bsd: {}, disp: {}, sepd: {}, divh: [], sepdn: {} })
 
 
 const AppStateContext = createContext<AppState | null>(null)
@@ -52,7 +52,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 
 			Object.entries(datasets).forEach(([slot, ds]) => {
 				if (ds) {
-					const { mm, px } = localAnchorFromAlignment(ds.alignment, ds.scan.spacing)
+					const { mm, px } = _localAnchorFromAlignment(ds.alignment, ds.scan.spacing)
 
 					setDataset((prev) => ({ ...prev, [slot]: ds }))
 					setLocalAnchorMM((prev) => ({ ...prev, [slot]: mm }))
@@ -103,12 +103,12 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 		try {
 			const ds: Dataset = await uploadDicomAPI(slot, files)
 
-			const { mm, px } = localAnchorFromAlignment(ds.alignment, ds.scan.spacing)
+			const { mm, px } = _localAnchorFromAlignment(ds.alignment, ds.scan.spacing)
 
 			setDataset((prev) => ({ ...prev, [slot]: ds }))
 			setLocalAnchorMM((prev) => ({ ...prev, [slot]: mm }))
 			setLocalAnchorPX((prev) => ({ ...prev, [slot]: px }))
-			setResults(emptyResults())
+			setResults(_emptyResults())
 
 		} catch (err) {
 			console.error(JSON.stringify(err))
@@ -123,7 +123,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 		try {
 			const ds = await uploadRTStructAPI(slot, file)
 			setDataset((prev) => ({ ...prev, [slot]: ds }))
-			setResults(emptyResults())
+			setResults(_emptyResults())
 		} catch (err) {
 			console.error(JSON.stringify(err))
 		} finally {
@@ -136,7 +136,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 		try {
 			await deleteDatasetAPI(slot)
 			setDataset((prev) => ({ ...prev, [slot]: null }))
-			setResults(emptyResults())
+			setResults(_emptyResults())
 		} catch (err) {
 			console.error(err)
 		}
@@ -169,7 +169,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 		try {
 			const ds = await updateAnchorAPI(slot, anchor, id)
 
-			const { mm, px } = localAnchorFromAlignment(ds.alignment, ds.scan.spacing)
+			const { mm, px } = _localAnchorFromAlignment(ds.alignment, ds.scan.spacing)
 
 			setDataset((prev) => ({ ...prev, [slot]: ds }))
 			setLocalAnchorMM((prev) => ({ ...prev, [slot]: mm }))
@@ -186,7 +186,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 		try {
 			const ds = await updateAlignmentAPI(slot, alignment)
 
-			const { mm, px } = localAnchorFromAlignment(ds.alignment, ds.scan.spacing)
+			const { mm, px } = _localAnchorFromAlignment(ds.alignment, ds.scan.spacing)
 
 			setDataset((prev) => ({ ...prev, [slot]: ds }))
 			setLocalAnchorMM((prev) => ({ ...prev, [slot]: mm }))

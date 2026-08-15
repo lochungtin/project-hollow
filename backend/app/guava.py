@@ -4,7 +4,7 @@ import numpy as np
 from .storage import getDataset, getDevice, getGuavaStore, setResult
 
 
-def buildRegions() -> tuple[gv.Region | None, gv.Region | None]:
+def _buildRegions() -> tuple[gv.Region | None, gv.Region | None]:
     """Build (or rebuild) both slots' `gv.Region` objects from their stored masks and target."""
     gvStore = getGuavaStore()
 
@@ -33,7 +33,7 @@ def buildRegions() -> tuple[gv.Region | None, gv.Region | None]:
     return gvStore["regions"]["A"], gvStore["regions"]["B"]
 
 
-def buildMetrics(rA: gv.Region, rB: gv.Region) -> gv.Metrics:
+def _buildMetrics(rA: gv.Region, rB: gv.Region) -> gv.Metrics:
     """Build a `gv.Metrics` comparing regions `rA` and `rB`."""
     return gv.Metrics(
         rA,
@@ -50,9 +50,9 @@ def getBSD() -> dict:
     gvStore = getGuavaStore()
     rA, rB = gvStore["regions"]["A"], gvStore["regions"]["B"]
     if rA is None or rB is None:
-        rA, rB = buildRegions()
+        rA, rB = _buildRegions()
 
-    metrics = buildMetrics(rA, rB)
+    metrics = _buildMetrics(rA, rB)
 
     asd = metrics.getBSDDiff("ASD")
     hd95 = metrics.getBSDDiff("HD95")
@@ -72,7 +72,7 @@ def getBSD() -> dict:
 
 def getDisp() -> dict:
     """Compute and cache each structure's relative displacement between slots A and B."""
-    metrics = buildMetrics(*buildRegions())
+    metrics = _buildMetrics(*_buildRegions())
     rt = {}
     for name, val in metrics.getROIDisplacementDiff().items():
         rt[name] = val.cpu().numpy().tolist()
@@ -83,7 +83,7 @@ def getDisp() -> dict:
 
 def getSepD() -> dict:
     """Compute and cache volume-based separation distance per structure."""
-    metrics = buildMetrics(*buildRegions())
+    metrics = _buildMetrics(*_buildRegions())
     rt = {}
     for name, rows in metrics.getSeparationDistanceDiff("volume").items():
         _rt = []
@@ -103,7 +103,7 @@ def getSepD() -> dict:
 
 def getDiVH() -> list[str]:
     """Compute and cache each structure's Distance Volume Histogram for both slots."""
-    rA, rB = buildRegions()
+    rA, rB = _buildRegions()
 
     resA = rA.getThresholdedOverlapPercentages("volume", percentages_only=False)
     resB = rB.getThresholdedOverlapPercentages("volume", percentages_only=False)
@@ -125,7 +125,7 @@ def getDiVH() -> list[str]:
 
 def getSepDN() -> dict:
     """Compute and cache RCVS-based (nearside) separation distance per structure."""
-    metrics = buildMetrics(*buildRegions())
+    metrics = _buildMetrics(*_buildRegions())
     rt = {}
     for name, rows in metrics.getSeparationDistanceDiff("rcvs").items():
         _rt = []

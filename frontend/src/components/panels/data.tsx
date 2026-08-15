@@ -15,7 +15,7 @@ const FALLBACK_TEXT = [
 ]
 
 /** Builds a row/column table of a numeric contour field (volume/surface_area) compared between datasets A and B. */
-const parseContoursNumDiff = (
+const _parseContoursNumDiff = (
     A: { [key: string]: Contour },
     B: { [key: string]: Contour },
     field: 'volume' | 'surface_area',
@@ -81,7 +81,7 @@ const Fallback = ({ fallbackCode, fallbackMax, ready, fn, children }: {
     children?: React.ReactElement | React.ReactElement[]
 }) => {
     /** Triggers the pane's job-queue callback, if provided. */
-    const onClick = (e: React.MouseEvent) => {
+    const _onClick = (e: React.MouseEvent) => {
         if (fn)
             fn()
     }
@@ -92,7 +92,7 @@ const Fallback = ({ fallbackCode, fallbackMax, ready, fn, children }: {
         <div className='data-card-fallback-blur'>
             {fallbackCode < fallbackMax ?
                 <div className='data-card-no-data'>{FALLBACK_TEXT[fallbackCode]}</div> :
-                <button className='data-card-job-trigger' onClick={onClick}>Queue Job to Local Server</button>
+                <button className='data-card-job-trigger' onClick={_onClick}>Queue Job to Local Server</button>
             }
         </div>
     </div>)
@@ -123,7 +123,7 @@ const Table = (
         }
 ) => {
     /** Updates the table's px/mm scale toggle. */
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => setScale(e.target.checked)
+    const _handleChange = (e: React.ChangeEvent<HTMLInputElement>) => setScale(e.target.checked)
 
     return (<table className='data-table'>
         <tbody>
@@ -133,7 +133,7 @@ const Table = (
                     <Switch
                         slotProps={{ input: { 'aria-label': 'controlled' } }}
                         checked={scale}
-                        onChange={handleChange}
+                        onChange={_handleChange}
                         size='small'
                         className='data-table-switch'
                     />
@@ -248,8 +248,8 @@ const DataPane = () => {
     const targetsSet = ((_A && _A?.targetID !== 'unknown') && (_B && _B?.targetID !== 'unknown')) ?? false
     const displayStatus = +emptyA + +emptyB + +targetsSet
 
-    const volData = parseContoursNumDiff(A, B, 'volume', aVolScale, bVolScale, scaleVol)
-    const saData = parseContoursNumDiff(A, B, 'surface_area', aSAScale, bSAScale, scaleSA)
+    const volData = _parseContoursNumDiff(A, B, 'volume', aVolScale, bVolScale, scaleVol)
+    const saData = _parseContoursNumDiff(A, B, 'surface_area', aSAScale, bSAScale, scaleSA)
 
     const bsdData = Object.values(state.results.bsd).map(r => Object.values(r).map(v => v / (scaleBSD ? aSAScale : 1)))
     const dispData = Object.values(state.results.disp).map(r => r.map(v => v / (scaleDisp ? unitScale : 1)))

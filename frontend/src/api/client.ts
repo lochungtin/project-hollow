@@ -98,7 +98,7 @@ export const triggerGuavaOpAPI = (op: string) => _get(`api/guava/queue/${op}`)
 export const getDiVHAPI = (roi: string) => _get(`api/guava/results/divh/${roi}`)
 
 /** Runs a fetch call and normalizes non-ok responses into thrown errors. */
-const _base_api = async(path: string, header?: RequestInit) => {
+const _baseApi = async(path: string, header?: RequestInit) => {
     const res = await fetch(path, header)
 
     if (!res.ok) {
@@ -116,10 +116,10 @@ const _base_api = async(path: string, header?: RequestInit) => {
 }
 
 /** Issues a GET request. */
-const _get = async (path: string) => _base_api(path)
+const _get = async (path: string) => _baseApi(path)
 
 /** Issues a POST request with a raw body (e.g. FormData). */
-const _post = async (path: string, body: BodyInit) => _base_api(
+const _post = async (path: string, body: BodyInit) => _baseApi(
     path,
     {
         method: 'POST',
@@ -128,7 +128,7 @@ const _post = async (path: string, body: BodyInit) => _base_api(
 )
 
 /** Issues a PUT request with a JSON-serialized body. */
-const _put = async (path: string, body: HTTPPayload) => _base_api(
+const _put = async (path: string, body: HTTPPayload) => _baseApi(
     path,
     {
         headers: {'Content-Type': 'application/json'},
@@ -138,7 +138,7 @@ const _put = async (path: string, body: HTTPPayload) => _base_api(
 )
 
 /** Issues a DELETE request. */
-const _del = async (path: string) => _base_api(
+const _del = async (path: string) => _baseApi(
     path,
     {
         method: 'DELETE',

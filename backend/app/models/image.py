@@ -79,7 +79,7 @@ def orthogonal(scan: Scan, ax: Axis, idx: int) -> Slice:
     """Extract a grayscale cardinal-axis slice of the scan as a `Slice`."""
     idx, c, dU, dV, width, height = _orthogonalGeometry(scan, ax, idx)
     img = _orthogonalSlice(scan.array, ax, idx)
-    return Slice(url=toURL(img), center=c, dU=dU, dV=dV, width=width, height=height)
+    return Slice(url=_toURL(img), center=c, dU=dU, dV=dV, width=width, height=height)
 
 
 def orthogonalMask(scan: Scan, mask: np.ndarray, color: Color, ax: Axis, idx: int) -> Slice:
@@ -87,7 +87,7 @@ def orthogonalMask(scan: Scan, mask: np.ndarray, color: Color, ax: Axis, idx: in
     idx, c, dU, dV, width, height = _orthogonalGeometry(scan, ax, idx)
     img = _orthogonalSlice(mask, ax, idx)
     return Slice(
-        url=maskToURL(img, color), center=c, dU=dU, dV=dV, width=width, height=height
+        url=_maskToURL(img, color), center=c, dU=dU, dV=dV, width=width, height=height
     )
 
 
@@ -153,7 +153,7 @@ def arbitrary(scan: Scan, anchor: Vec3, normal: Vec3, idx: int) -> Slice:
     )
 
     return Slice(
-        url=toURL(sampled),
+        url=_toURL(sampled),
         center=tuple(center.tolist()),
         dU=tuple(u.tolist()),
         dV=tuple(v.tolist()),
@@ -178,7 +178,7 @@ def arbitraryMask(scan: Scan, mask: np.ndarray, color: Color, anchor: Vec3, norm
     )
 
     return Slice(
-        url=maskToURL(sampled, color),
+        url=_maskToURL(sampled, color),
         center=tuple(center.tolist()),
         dU=tuple(u.tolist()),
         dV=tuple(v.tolist()),
@@ -187,7 +187,7 @@ def arbitraryMask(scan: Scan, mask: np.ndarray, color: Color, anchor: Vec3, norm
     )
 
 
-def toURL(arr: np.ndarray) -> str:
+def _toURL(arr: np.ndarray) -> str:
     """Encode a 2D grayscale array as a min-max-normalized base64 PNG data URL."""
     mn, mx = float(arr.min()), float(arr.max())
     if mx - mn < 1e-6:
@@ -201,7 +201,7 @@ def toURL(arr: np.ndarray) -> str:
     return rt
 
 
-def maskToURL(mask: np.ndarray, color: Color) -> str:
+def _maskToURL(mask: np.ndarray, color: Color) -> str:
     """Encode a boolean mask as a transparent PNG, flat-colored with a brighter boundary ring."""
     mask = np.asarray(mask, dtype=bool)
     boundary = mask & ~binary_erosion(mask)
@@ -233,7 +233,7 @@ def _normalize(values: np.ndarray, vmin: float, vmax: float) -> np.ndarray:
     return np.clip((values - vmin) / (vmax - vmin), 0.0, 1.0)
 
 
-def fieldToURL(mask: np.ndarray, field: np.ndarray, vmin: float, vmax: float) -> str:
+def _fieldToURL(mask: np.ndarray, field: np.ndarray, vmin: float, vmax: float) -> str:
     """Encode a boolean mask as a transparent PNG colored per-pixel by `field` via `_distanceColor`."""
     mask = np.asarray(mask, dtype=bool)
     boundary = mask & ~binary_erosion(mask)
@@ -262,7 +262,7 @@ def orthogonalScalarMask(
     maskImg = _orthogonalSlice(mask, ax, idx)
     fieldImg = _orthogonalSlice(field, ax, idx)
     return Slice(
-        url=fieldToURL(maskImg, fieldImg, vmin, vmax),
+        url=_fieldToURL(maskImg, fieldImg, vmin, vmax),
         center=c,
         dU=dU,
         dV=dV,
@@ -284,7 +284,7 @@ def arbitraryScalarMask(
     fieldSampled = map_coordinates(field, pts, order=1, mode="nearest")
 
     return Slice(
-        url=fieldToURL(maskSampled, fieldSampled, vmin, vmax),
+        url=_fieldToURL(maskSampled, fieldSampled, vmin, vmax),
         center=tuple(center.tolist()),
         dU=tuple(u.tolist()),
         dV=tuple(v.tolist()),

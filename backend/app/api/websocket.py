@@ -44,10 +44,10 @@ async def handshake(websocket: WebSocket) -> None:
         print(f"[CONNECT]\tCurrent active connections: {ACTIVE_CONNECTIONS}")
         if ACTIVE_CONNECTIONS == 0 and EVER_CONNECTED:
             print("[SHUTDOWN]\tQueued shutdown sequence.")
-            SHUTDOWN = asyncio.create_task(shutdown())
+            SHUTDOWN = asyncio.create_task(_shutdown())
 
 
-async def shutdown() -> None:
+async def _shutdown() -> None:
     """Wait 5s, then log a shutdown notice if no client has reconnected.
 
     Process exit is currently disabled.

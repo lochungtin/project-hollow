@@ -43,7 +43,7 @@ export const sliceGeometry = (scan: Scan, ax: Axis, idx: number): Omit<ResponseS
 }
 
 /** Computes the arbitrary-axis slicing grid's pixel/index bound, sized to the volume's bounding-box diagonal so it covers the whole scan at any orientation. */
-const arbitraryDim = (scan: Scan): { dim: number, spacing: number } => {
+const _arbitraryDim = (scan: Scan): { dim: number, spacing: number } => {
     const [z, y, x] = scan.shape
     const [sZ, sY, sX] = scan.spacing
     const spacing = sX
@@ -57,7 +57,7 @@ const arbitraryDim = (scan: Scan): { dim: number, spacing: number } => {
 }
 
 /** Returns the maximum (symmetric) arbitrary-axis slice index for a scan, used as the scroll bound. */
-export const arbitraryMaxIdx = (scan: Scan): number => Math.floor(arbitraryDim(scan).dim / 2)
+export const arbitraryMaxIdx = (scan: Scan): number => Math.floor(_arbitraryDim(scan).dim / 2)
 
 /** Computes a freeform-plane slice's geometry through `anchor` along `normal`, without clamping `idx` to the scan's valid range. */
 export const arbitrarySliceGeometry = (scan: Scan, anchor: Vec3D, normal: Vec3D, idx: number): Omit<ResponseSlice, 'url'> => {
@@ -68,7 +68,7 @@ export const arbitrarySliceGeometry = (scan: Scan, anchor: Vec3D, normal: Vec3D,
     const v = ref.clone().sub(n.clone().multiplyScalar(ref.dot(n))).normalize()
     const u = new THREE.Vector3().crossVectors(v, n)
 
-    const { dim, spacing } = arbitraryDim(scan)
+    const { dim, spacing } = _arbitraryDim(scan)
     const center = new THREE.Vector3(...anchor).addScaledVector(n, idx * spacing)
     const extent = dim * spacing
 
@@ -82,7 +82,7 @@ export const arbitrarySliceGeometry = (scan: Scan, anchor: Vec3D, normal: Vec3D,
 }
 
 /** Derives a plane mesh's world-space basis (u/v/normal) from a slice's patient-space dU/dV directions. */
-const planeBasis = (dU: Vec3D, dV: Vec3D) => {
+const _planeBasis = (dU: Vec3D, dV: Vec3D) => {
     const u = new THREE.Vector3(...toWorld(dU)).normalize()
     const v = new THREE.Vector3(...toWorld(dV)).normalize()
     const normal = new THREE.Vector3().crossVectors(u, v).normalize()
@@ -90,8 +90,8 @@ const planeBasis = (dU: Vec3D, dV: Vec3D) => {
 }
 
 /** Positions and orients a plane mesh to match a slice's geometry. */
-const orientPlane = (mesh: THREE.Mesh, slice: Omit<ResponseSlice, 'url'>) => {
-    const { u, v, normal } = planeBasis(slice.dU, slice.dV)
+const _orientPlane = (mesh: THREE.Mesh, slice: Omit<ResponseSlice, 'url'>) => {
+    const { u, v, normal } = _planeBasis(slice.dU, slice.dV)
 
     mesh.setRotationFromMatrix(new THREE.Matrix4().makeBasis(u, v, normal))
     const c = toWorld(slice.center)
@@ -105,7 +105,7 @@ const orientPlane = (mesh: THREE.Mesh, slice: Omit<ResponseSlice, 'url'>) => {
  * normal and up to keep Superior on top with consistent left/right.
  */
 export const axisFrame = (ax: Axis): { normal: THREE.Vector3, up: THREE.Vector3 } => {
-    const { v, normal } = planeBasis(AXIS_DU[ax], AXIS_DV[ax])
+    const { v, normal } = _planeBasis(AXIS_DU[ax], AXIS_DV[ax])
     const flippedNormal = normal.multiplyScalar(-1)
 
     if (ax === 'axial')
@@ -133,7 +133,7 @@ export const render = (slice: ResponseSlice): Promise<THREE.Mesh> => new Promise
             })
 
             const mesh = new THREE.Mesh(geom, mat)
-            orientPlane(mesh, slice)
+            _orientPlane(mesh, slice)
             res(mesh)
         },
         undefined,
@@ -160,7 +160,7 @@ export const renderOverlay = (slice: ResponseSlice): Promise<THREE.Mesh> => new 
             })
 
             const mesh = new THREE.Mesh(geom, mat)
-            orientPlane(mesh, slice)
+            _orientPlane(mesh, slice)
             res(mesh)
         },
         undefined,
@@ -177,7 +177,7 @@ export const renderBlack = (slice: Omit<ResponseSlice, 'url'>): THREE.Mesh => {
     })
 
     const mesh = new THREE.Mesh(geom, mat)
-    orientPlane(mesh, slice)
+    _orientPlane(mesh, slice)
     return mesh
 }
 

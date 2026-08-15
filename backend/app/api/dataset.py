@@ -42,7 +42,7 @@ def rehydrateDataset() -> dict:
 
 
 @router.post("/{slot}/dicom")
-async def upload_dicom(slot: str, files: list[UploadFile]) -> dict:
+async def uploadDicom(slot: str, files: list[UploadFile]) -> dict:
     """Parse an uploaded DICOM series into a new `Dataset` for `slot`, replacing any prior one."""
     contents = [await f.read() for f in files]
     try:
@@ -58,7 +58,7 @@ async def upload_dicom(slot: str, files: list[UploadFile]) -> dict:
 
 
 @router.post("/{slot}/rtstruct")
-async def upload_dicom(slot: str, file: UploadFile) -> dict:
+async def uploadRTStruct(slot: str, file: UploadFile) -> dict:
     """Parse an uploaded RTSTRUCT into `slot`'s dataset and register its masks with GUAVA."""
     content = await file.read()
     dataset = getDataset(slot)
@@ -80,7 +80,7 @@ async def upload_dicom(slot: str, file: UploadFile) -> dict:
 
 
 @router.delete("/{slot}")
-async def delete_dataset(slot: str) -> dict:
+async def deleteDataset(slot: str) -> dict:
     """Remove `slot`'s dataset, GUAVA masks/region, and every cached analysis result."""
     clearDataset(slot)
     clearGuavaStore(slot)
@@ -89,7 +89,7 @@ async def delete_dataset(slot: str) -> dict:
 
 
 @router.put("/{slot}/scan/visibility")
-def update_scan_visibility(slot: str, body: VisibilityPayload) -> dict:
+def updateScanVisibility(slot: str, body: VisibilityPayload) -> dict:
     """Set whether `slot`'s scan plane is rendered."""
     dataset = getDataset(slot)
     dataset.scan.visible = body.visibility
@@ -97,7 +97,7 @@ def update_scan_visibility(slot: str, body: VisibilityPayload) -> dict:
 
 
 @router.put("/{slot}/contour/{id}/visibility")
-def update_scan_visibility(slot: str, id: str, body: VisibilityPayload) -> dict:
+def updateContourVisibility(slot: str, id: str, body: VisibilityPayload) -> dict:
     """Set whether a single contour is rendered."""
     dataset = getDataset(slot)
     dataset.contours[id].visible = body.visibility
@@ -105,7 +105,7 @@ def update_scan_visibility(slot: str, id: str, body: VisibilityPayload) -> dict:
 
 
 @router.put("/{slot}/target")
-def update_target(slot: str, body: TargetPayload) -> dict:
+def updateTarget(slot: str, body: TargetPayload) -> dict:
     """Set `slot`'s target ROI and invalidate the analyses that depend on it."""
     dataset = getDataset(slot)
     dataset.targetID = body.id
@@ -114,7 +114,7 @@ def update_target(slot: str, body: TargetPayload) -> dict:
 
 
 @router.put("/{slot}/anchor")
-def update_anchor(slot: str, body: AnchorPayload) -> dict:
+def updateAnchor(slot: str, body: AnchorPayload) -> dict:
     """Pin a new absolute-mm point as `slot`'s anchor and reset its alignment to zero."""
     dataset = getDataset(slot)
     dataset.anchorID = body.id
@@ -125,7 +125,7 @@ def update_anchor(slot: str, body: AnchorPayload) -> dict:
 
 
 @router.put("/{slot}/alignment")
-def update_alignment(slot: str, body: AlignmentPayload) -> dict:
+def updateAlignment(slot: str, body: AlignmentPayload) -> dict:
     """Set `slot`'s manual world-origin offset."""
     dataset = getDataset(slot)
     dataset.alignment = np.asarray([body.x, body.y, body.z], dtype=float)

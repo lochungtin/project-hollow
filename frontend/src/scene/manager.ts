@@ -38,7 +38,7 @@ export default class SceneManager {
         this.scene.background = new THREE.Color(0x111111)
 
         this.camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100000)
-        this.updateCamera()
+        this._updateCamera()
 
         this.renderer = new THREE.WebGLRenderer({ antialias: true })
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
@@ -59,10 +59,10 @@ export default class SceneManager {
         this.resizeObserver.observe(container)
         this.resize()
 
-        this.animate = this.animate.bind(this)
-        this.frameHandle = requestAnimationFrame(this.animate)
+        this._animate = this._animate.bind(this)
+        this.frameHandle = requestAnimationFrame(this._animate)
 
-        ;['A', 'B'].forEach(slot => {this.dataset[slot] = this.makeDataset(slot)})
+        ;['A', 'B'].forEach(slot => {this.dataset[slot] = this._makeDataset(slot)})
     }
 
     /** Resizes the renderer and camera aspect to match the container's current size. */
@@ -75,8 +75,8 @@ export default class SceneManager {
     }
 
     /** Renders one animation frame and schedules the next. */
-    private animate() {
-        this.frameHandle = requestAnimationFrame(this.animate)
+    private _animate() {
+        this.frameHandle = requestAnimationFrame(this._animate)
         this.renderer.render(this.scene, this.camera)
     }
 
@@ -85,12 +85,12 @@ export default class SceneManager {
         cancelAnimationFrame(this.frameHandle)
         this.resizeObserver.disconnect()
         Object.values(this.dataset).forEach((d) => {
-            disposeObj(d.outer)
+            _disposeObj(d.outer)
             if (d.axes)
-                disposeObj(d.axes)
+                _disposeObj(d.axes)
         })
         if (this.arbitraryAxis)
-            disposeObj(this.arbitraryAxis)
+            _disposeObj(this.arbitraryAxis)
         this.renderer.dispose()
         this.renderer.domElement.remove()
     }
@@ -104,11 +104,11 @@ export default class SceneManager {
         this.defaultTarget.copy(this.cameraTarget)
         this.defaultDistance = this.cameraDistance
 
-        this.updateCamera()
+        this._updateCamera()
     }
 
     /** Applies the current target/offset/distance/up state to the camera object. */
-    private updateCamera() {
+    private _updateCamera() {
         const pos = this.cameraTarget.clone().addScaledVector(this.cameraOffset, this.cameraDistance)
         this.camera.position.copy(pos)
         this.camera.up.copy(this.cameraUp)
@@ -119,7 +119,7 @@ export default class SceneManager {
     zoomCamera(sign: number) {
         const factor = sign > 0 ? 1.1 : 1 / 1.1
         this.cameraDistance = THREE.MathUtils.clamp(this.cameraDistance * factor, 20, 10000)
-        this.updateCamera()
+        this._updateCamera()
     }
 
     /** Orbits the camera by `angle` about `axis` (a patient-space direction), keeping cameraUp in lockstep to avoid roll. */
@@ -127,14 +127,14 @@ export default class SceneManager {
         const worldAxis = new THREE.Vector3(...toWorld(axis)).normalize()
         this.cameraOffset.applyAxisAngle(worldAxis, angle)
         this.cameraUp.applyAxisAngle(worldAxis, angle)
-        this.updateCamera()
+        this._updateCamera()
     }
 
     /** Snaps the camera to a flat, face-on view along `normal` with `up` as the screen vertical, preserving zoom distance. */
     setOrthogonalView(normal: THREE.Vector3, up: THREE.Vector3) {
         this.cameraOffset.copy(normal).normalize()
         this.cameraUp.copy(up).normalize()
-        this.updateCamera()
+        this._updateCamera()
     }
 
     /** Restores the camera to the state captured by the most recent `setCamera` call. */
@@ -143,11 +143,11 @@ export default class SceneManager {
         this.cameraDistance = this.defaultDistance
         this.cameraOffset.copy(this.defaultOffset)
         this.cameraUp.copy(this.defaultUp)
-        this.updateCamera()
+        this._updateCamera()
     }
 
     /** Builds a world-origin-centered RGB cross spanning `extent` along each patient-space axis. */
-    private makeAxes(extent: Vec3D): THREE.LineSegments {
+    private _makeAxes(extent: Vec3D): THREE.LineSegments {
         const [eX, eY, eZ] = toWorld(extent)
 
         const shX = eX / 2
@@ -179,9 +179,9 @@ export default class SceneManager {
         const d = this.dataset[slot]
         if (d.axes) {
             this.scene.remove(d.axes)
-            disposeObj(d.axes)
+            _disposeObj(d.axes)
         }
-        d.axes = this.makeAxes(extent)
+        d.axes = this._makeAxes(extent)
         d.axes.visible = slot === this.activeSlot
         this.scene.add(d.axes)
     }
@@ -208,7 +208,7 @@ export default class SceneManager {
     clearArbitraryAxis() {
         if (this.arbitraryAxis) {
             this.scene.remove(this.arbitraryAxis)
-            disposeObj(this.arbitraryAxis)
+            _disposeObj(this.arbitraryAxis)
             this.arbitraryAxis = null
         }
     }
@@ -239,7 +239,7 @@ export default class SceneManager {
     }
 
     /** Builds a fresh, empty inner/outer group pair for a slot. */
-    private makeDataset(slot: string): VisDataset {
+    private _makeDataset(slot: string): VisDataset {
         const inner = new THREE.Group()
         const outer = new THREE.Group()
         outer.visible = slot === this.activeSlot
@@ -253,13 +253,13 @@ export default class SceneManager {
     /** Disposes and resets a slot's entire scene content back to an empty state. */
     removeDataset(slot: string) {
         const d = this.dataset[slot]
-        disposeObj(d.outer)
+        _disposeObj(d.outer)
         this.scene.remove(d.outer)
         if (d.axes) {
             this.scene.remove(d.axes)
-            disposeObj(d.axes)
+            _disposeObj(d.axes)
         }
-        this.dataset[slot] = this.makeDataset(slot)
+        this.dataset[slot] = this._makeDataset(slot)
     }
 
     /** Positions a slot's content so `anchor` sits at world origin, then offsets by `offset`; `rotation` is not yet wired up. */
@@ -279,7 +279,7 @@ export default class SceneManager {
         const d = this.dataset[slot]
         if (key in d.slices) {
             d.inner.remove(d.slices[key])
-            disposeObj(d.slices[key])
+            _disposeObj(d.slices[key])
             delete d.slices[key]
         }
         if (slice) {
@@ -294,7 +294,7 @@ export default class SceneManager {
         const d = this.dataset[slot]
         Object.values(d.slices).forEach(p => {
             d.inner.remove(p)
-            disposeObj(p)
+            _disposeObj(p)
         })
         d.slices = {}
     }
@@ -310,7 +310,7 @@ export default class SceneManager {
         const d = this.dataset[slot]
         if (key in d.overlays) {
             d.inner.remove(d.overlays[key])
-            disposeObj(d.overlays[key])
+            _disposeObj(d.overlays[key])
             delete d.overlays[key]
         }
         if (obj) {
@@ -324,7 +324,7 @@ export default class SceneManager {
         const d = this.dataset[slot]
         Object.values(d.overlays).forEach(p => {
             d.inner.remove(p)
-            disposeObj(p)
+            _disposeObj(p)
         })
         d.overlays = {}
     }
@@ -366,7 +366,7 @@ export default class SceneManager {
         if (!d || !obj)
             return
         d.inner.remove(obj)
-        disposeObj(obj)
+        _disposeObj(obj)
         delete d.outs[id]
     }
 
@@ -385,7 +385,7 @@ export default class SceneManager {
 
 
 /** Recursively disposes a Three.js object's geometry and material(s). */
-const disposeObj = (obj: THREE.Object3D) => {
+const _disposeObj = (obj: THREE.Object3D) => {
     obj.traverse((child) => {
         const c = child as unknown as { geometry?: THREE.BufferGeometry, material?: THREE.Material | THREE.Material[] }
         c.geometry?.dispose()

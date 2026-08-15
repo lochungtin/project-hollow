@@ -12,7 +12,7 @@ const AXIS_NORM_MAP: { [key: string]: Vec3D } = {'1': [0, 0, 1], '2': [0, 1, 0],
 const ROTATE_STEP = Math.PI / 180
 
 /** Builds a fresh cardinal-axis slice state centered on the given anchor. */
-const sliceState = (anchor: Vec3D): SliceState => ({
+const _sliceState = (anchor: Vec3D): SliceState => ({
     'mode': 'axial',
     'idx': { 'axial': 0, 'coronal': 0, 'sagittal': 0 },
     'anchor': anchor,
@@ -21,7 +21,7 @@ const sliceState = (anchor: Vec3D): SliceState => ({
 
 
 /** Returns the maximum valid cardinal-axis slice index for a scan shape. */
-const getMaxIdx = (shape: Vec3D, ax: string) => {
+const _getMaxIdx = (shape: Vec3D, ax: string) => {
     if (ax === 'axial')
         return shape[0] - 1
     if (ax === 'coronal')
@@ -30,7 +30,7 @@ const getMaxIdx = (shape: Vec3D, ax: string) => {
 }
 
 /** Normalizes a vector, falling back to +Z when it is (near) zero-length. */
-const normalizeVec = (v: Vec3D): Vec3D => {
+const _normalizeVec = (v: Vec3D): Vec3D => {
     const len = Math.sqrt(v[0] ** 2 + v[1] ** 2 + v[2] ** 2)
     return len < 1e-6 ? [0, 0, 1] : [v[0] / len, v[1] / len, v[2] / len]
 }
@@ -48,7 +48,7 @@ const ViewPane = () => {
     const refState = useRef(state)
     const refActiveSlot = useRef(state.activeSlot)
 
-    const refSlice = useRef<Record<string, SliceState>>({ 'A': sliceState([0, 0, 0]), 'B': sliceState([0, 0, 0]) })
+    const refSlice = useRef<Record<string, SliceState>>({ 'A': _sliceState([0, 0, 0]), 'B': _sliceState([0, 0, 0]) })
     const refOpToken = useRef<Record<string, number>>({ 'A': 0, 'B': 0 })
     const refContourOpToken = useRef<Record<string, number>>({ 'A': 0, 'B': 0 })
 
@@ -73,7 +73,7 @@ const ViewPane = () => {
     }, [])
 
     /** Fetches and renders the active scan slice for a slot (or a black placeholder if the index is out of range), then refreshes its contour overlays. */
-    const refreshSlice = async(slot: string): Promise<void> => {
+    const _refreshSlice = async(slot: string): Promise<void> => {
         const scene = refScene.current
         const ds = refState.current.dataset[slot]
 
@@ -86,7 +86,7 @@ const ViewPane = () => {
 
         const isArbitrary = slice.mode === 'arbitrary'
         const minIdx = isArbitrary ? -arbitraryMaxIdx(ds.scan) : 0
-        const maxIdx = isArbitrary ? arbitraryMaxIdx(ds.scan) : getMaxIdx(ds.scan.shape, slice.mode)
+        const maxIdx = isArbitrary ? arbitraryMaxIdx(ds.scan) : _getMaxIdx(ds.scan.shape, slice.mode)
 
         try {
             if (idx < minIdx || idx > maxIdx) {
@@ -99,7 +99,7 @@ const ViewPane = () => {
 
                 mesh.visible = ds.scan.visible
                 scene.setSlice(slot, 'primary', mesh)
-                refreshContourSlices(slot)
+                _refreshContourSlices(slot)
                 return
             }
 
@@ -115,7 +115,7 @@ const ViewPane = () => {
 
             mesh.visible = ds.scan.visible
             scene.setSlice(slot, 'primary', mesh)
-            refreshContourSlices(slot)
+            _refreshContourSlices(slot)
             console.log('Frame Update')
         }
         catch {
@@ -124,18 +124,18 @@ const ViewPane = () => {
     }
 
     /** Returns whether a contour is currently shown against the target's distance map instead of its flat color. */
-    const isDMap = (slot: string, id: string): boolean =>
+    const _isDMap = (slot: string, id: string): boolean =>
         refState.current.dmapContours.some(s => s.slot === slot && s.id === id)
 
     /** Fetches and renders a single contour's 3D mesh, branching between the flat-color and distance-map-colored endpoints. */
-    const loadContourMesh = async (slot: string, contour: Contour): Promise<void> => {
+    const _loadContourMesh = async (slot: string, contour: Contour): Promise<void> => {
         const scene = refScene.current
         if (!scene)
             return
 
         const visible = contour.visible && !sliceMode.current
         try {
-            if (isDMap(slot, contour.id)) {
+            if (_isDMap(slot, contour.id)) {
                 const mesh = await getContourDMap(slot, contour.id)
                 scene.renderContour(slot, contour.id, mesh, contour.color, 0.7, visible, false, mesh.colors)
             } else {
@@ -148,7 +148,7 @@ const ViewPane = () => {
     }
 
     /** Fetches and draws each visible contour's 2D cross-section at the current slice, pruning overlays for contours no longer visible; a no-op when slice-overlay mode is off. */
-    const refreshContourSlices = async (slot: string): Promise<void> => {
+    const _refreshContourSlices = async (slot: string): Promise<void> => {
         const scene = refScene.current
         const ds = refState.current.dataset[slot]
 
@@ -166,7 +166,7 @@ const ViewPane = () => {
         const idx = slice.idx[slice.mode]
         const isArbitrary = slice.mode === 'arbitrary'
         const minIdx = isArbitrary ? -arbitraryMaxIdx(ds.scan) : 0
-        const maxIdx = isArbitrary ? arbitraryMaxIdx(ds.scan) : getMaxIdx(ds.scan.shape, slice.mode)
+        const maxIdx = isArbitrary ? arbitraryMaxIdx(ds.scan) : _getMaxIdx(ds.scan.shape, slice.mode)
         const inRange = idx >= minIdx && idx <= maxIdx
 
         const visibleContours = inRange ? Object.values(ds.contours).filter(c => c.visible) : []
@@ -179,7 +179,7 @@ const ViewPane = () => {
 
         await Promise.all(visibleContours.map(async (contour, i) => {
             try {
-                const dmap = isDMap(slot, contour.id)
+                const dmap = _isDMap(slot, contour.id)
                 const res = isArbitrary
                     ? dmap
                         ? await getArbitraryContourDMapSlice(slot, contour.id, slice.normal, idx)
@@ -203,7 +203,7 @@ const ViewPane = () => {
     }
 
     /** Syncs each rendered contour's 3D visibility with slice-overlay mode and refreshes the 2D overlays to match. */
-    const syncContourMode = (slot: string) => {
+    const _syncContourMode = (slot: string) => {
         const scene = refScene.current
         const dataset = refState.current.dataset[slot]
         if (!scene || !dataset)
@@ -213,7 +213,7 @@ const ViewPane = () => {
             if (scene.rendered(slot, contour.id))
                 scene.setContourVisibility(slot, contour.id, contour.visible && !sliceMode.current)
         })
-        refreshContourSlices(slot)
+        _refreshContourSlices(slot)
     }
 
     useEffect(() => {
@@ -223,7 +223,7 @@ const ViewPane = () => {
             return
 
         /** Handles zoom (Ctrl/Cmd), camera orbit (Space), and slice-index scrolling. */
-        const onWheel = (e: WheelEvent) => {
+        const _onWheel = (e: WheelEvent) => {
             e.preventDefault()
 
             const slot = refActiveSlot.current
@@ -251,13 +251,13 @@ const ViewPane = () => {
                 const sState = refSlice.current[s]
                 sState.mode = mode
                 sState.idx[mode] += sign
-                refreshSlice(s)
+                _refreshSlice(s)
             })
             console.log(`Normal Scrolling ${sign}`)
         }
 
         /** Handles view keybindings: camera reset/flat-view, dual mode, active-slot toggle, axis switching, arbitrary-axis slicing, and slice-overlay mode. */
-        const onKeyDown = (e: KeyboardEvent) => {
+        const _onKeyDown = (e: KeyboardEvent) => {
             if ((e.code === 'space' || e.key === ' ') && !spaceHeld.current) {
                 console.log('Spacebar held')
                 spaceHeld.current = true
@@ -291,7 +291,7 @@ const ViewPane = () => {
                 const loadedSlots = ['A', 'B'].filter(s => refState.current.dataset[s])
                 loadedSlots.forEach(s => refState.current.updateVisibility(s, 'scan', false))
 
-                loadedSlots.forEach(s => syncContourMode(s))
+                loadedSlots.forEach(s => _syncContourMode(s))
                 return
             }
 
@@ -308,7 +308,7 @@ const ViewPane = () => {
                 const newSlot = refState.current.activeSlot === 'A' ? 'B' : 'A'
                 console.log(`Change active slot to ${newSlot}`)
                 refState.current.setActiveSlot(newSlot)
-                refreshSlice(newSlot)
+                _refreshSlice(newSlot)
                 return
             }
 
@@ -323,7 +323,7 @@ const ViewPane = () => {
                     sState.normal = normal
                     sState.anchor = refState.current.dataset[s]?.anchor ?? [0, 0, 0]
                     sState.mode = mode
-                    refreshSlice(s)
+                    _refreshSlice(s)
                 })
                 return
             }
@@ -338,7 +338,7 @@ const ViewPane = () => {
                 if (!comA || !comB)
                     return
 
-                const normal = normalizeVec([comB[0] - comA[0], comB[1] - comA[1], comB[2] - comA[2]])
+                const normal = _normalizeVec([comB[0] - comA[0], comB[1] - comA[1], comB[2] - comA[2]])
 
                 const loadedSlots = ['A', 'B'].filter(s => refState.current.dataset[s])
                 if (loadedSlots.length === 0)
@@ -356,7 +356,7 @@ const ViewPane = () => {
                     sState.mode = 'arbitrary'
                     sState.normal = normal
                     sState.idx['arbitrary'] = 0
-                    refreshSlice(s)
+                    _refreshSlice(s)
                 })
                 return
             }
@@ -364,25 +364,25 @@ const ViewPane = () => {
             if (e.key === 'm') {
                 sliceMode.current = !sliceMode.current
                 const loadedSlots = ['A', 'B'].filter(s => refState.current.dataset[s])
-                loadedSlots.forEach(s => syncContourMode(s))
+                loadedSlots.forEach(s => _syncContourMode(s))
                 return
             }
         }
 
         /** Clears the space-held rotate modifier on release. */
-        const onKeyUp = (e: KeyboardEvent) => {
+        const _onKeyUp = (e: KeyboardEvent) => {
             if ((e.code === 'space' || e.key === ' ') && spaceHeld.current)
                 console.log('Spacebar released')
                 spaceHeld.current = false
         }
 
-        container.addEventListener('wheel', onWheel, { passive: false })
-        window.addEventListener('keydown', onKeyDown)
-        window.addEventListener('keyup', onKeyUp)
+        container.addEventListener('wheel', _onWheel, { passive: false })
+        window.addEventListener('keydown', _onKeyDown)
+        window.addEventListener('keyup', _onKeyUp)
         return () => {
-            container.removeEventListener('wheel', onWheel)
-            window.removeEventListener('keydown', onKeyDown)
-            window.removeEventListener('keyup', onKeyUp)
+            container.removeEventListener('wheel', _onWheel)
+            window.removeEventListener('keydown', _onKeyDown)
+            window.removeEventListener('keyup', _onKeyUp)
         }
     }, [])
 
@@ -408,11 +408,11 @@ const ViewPane = () => {
             }
             scene.setDatasetTrans(slot, dataset.anchor, dataset.alignment, dataset.render.rotation)
             scene.setScanVisibility(slot, dataset.scan.visible)
-            refreshContourSlices(slot)
+            _refreshContourSlices(slot)
 
             if (refScanID.current[slot] !== dataset.scan.id) {
                 refScanID.current[slot] = dataset.scan.id
-                refSlice.current[slot] = sliceState(dataset.anchor)
+                refSlice.current[slot] = _sliceState(dataset.anchor)
 
                 const [z, y, x] = dataset.scan.shape
                 const [sZ, sY, sX] = dataset.scan.spacing
@@ -431,7 +431,7 @@ const ViewPane = () => {
                     (z - 1) * sZ,
                 ])
 
-                refreshSlice(slot)
+                _refreshSlice(slot)
             }
         })
     }, [
@@ -459,7 +459,7 @@ const ViewPane = () => {
 
             contours.forEach(contour => {
                 if (!scene.rendered(slot, contour.id)) {
-                    loadContourMesh(slot, contour).then(() => syncContourMode(slot))
+                    _loadContourMesh(slot, contour).then(() => _syncContourMode(slot))
                 }
             })
 
@@ -469,7 +469,7 @@ const ViewPane = () => {
                 rm.forEach((id) => scene.removeContour(slot, id))
             }
 
-            syncContourMode(slot)
+            _syncContourMode(slot)
         })
     }, [JSON.stringify(state.dataset['A']?.contours), JSON.stringify(state.dataset['B']?.contours)])
 
@@ -485,9 +485,9 @@ const ViewPane = () => {
 
             Object.values(dataset.contours).forEach(contour => {
                 if (scene.rendered(slot, contour.id))
-                    loadContourMesh(slot, contour)
+                    _loadContourMesh(slot, contour)
             })
-            refreshContourSlices(slot)
+            _refreshContourSlices(slot)
         })
     }, [JSON.stringify(state.dmapContours)])
 
