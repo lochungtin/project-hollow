@@ -1,0 +1,15 @@
+services:
+  hollow:
+    build: .
+    ports:
+      - "7000:7000"
+    environment:
+      - PORT=7000
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]

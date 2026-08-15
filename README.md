@@ -59,6 +59,29 @@ cd backend && source .venv/bin/activate && uvicorn app.main:app --reload --port 
 cd frontend && npm run dev
 ```
 
+### Running with Docker
+
+The included `Dockerfile`/`docker-compose.yml` build the frontend and run the backend in a single container — no local Python or Node setup needed.
+
+```bash
+docker compose up --build
+```
+
+Then open http://localhost:7000. Stop it with `Ctrl+C` or `docker compose down`.
+
+Without Compose:
+
+```bash
+docker build -t hollow .
+docker run -p 7000:7000 hollow          # CPU
+docker run -p 7000:7000 --gpus all hollow   # with GPU passthrough
+```
+
+Notes:
+- This needs a running Docker daemon. If `docker compose up`/`docker build` fails with `failed to connect to the docker API at unix:///var/run/docker.sock`, Docker (Docker Desktop, or `dockerd` on native Linux) isn't running — start it first.
+- `docker-compose.yml` requests an NVIDIA GPU by default (`deploy.resources.reservations.devices`), which requires the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) on the host. If you don't have a GPU or the toolkit installed, remove that block — GUAVA-RT automatically falls back to CPU.
+- The container restarts automatically (`restart: unless-stopped`): the backend exits a few seconds after the last browser tab disconnects to free GPU/CPU between sessions (this is a local, single-user app), and the restart policy brings it right back for your next visit.
+
 ## Usage
 
 ### Loading a dataset

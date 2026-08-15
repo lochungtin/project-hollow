@@ -1,0 +1,12 @@
+**/.git
+**/.claude
+**/node_modules
+**/dist
+**/.venv
+**/__pycache__
+**/*.pyc
+**/.tsbuild-out
+**/tsconfig.tsbuildinfo
+data
+plans
+*.md
