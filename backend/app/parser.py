@@ -100,6 +100,29 @@ def toScanObj(filesBytes):
 
 
 # --- RTStruct
+# low-discrepancy multipliers (irrational, so `index * step mod 1` stays spread out across
+# contours instead of clustering short-range, even for structures adjacent in the RTSTRUCT's
+# own ordering) — one per HLS channel so hue/lightness/saturation don't co-vary in lockstep
+_HUE_STEP = 0.6180339887498949  # golden ratio conjugate
+_LGT_STEP = 0.4142135623730951  # sqrt(2) - 1
+_SAT_STEP = 0.7320508075688772  # sqrt(3) - 1
+
+# dataset A -> red/purple/blue, dataset B -> yellow/green/dark green: disjoint hue bands
+# (colorsys's hue wheel: 0=red, 1/6=yellow, 1/3=green, 1/2=cyan, 2/3=blue, 5/6=magenta), each
+# spanning half the wheel so the two datasets stay visually distinguishable at a glance, not
+# just contour-by-contour, while individual contours within a dataset still read as clearly
+# different colors (red vs. purple vs. blue; yellow vs. green vs. dark green)
+_HUE_RANGES = {"A": (0.58, 1.00), "B": (0.13, 0.42)}
+
+
+def _contourColor(slot, index):
+    loH, hiH = _HUE_RANGES.get(slot, (0.0, 1.0))
+    h = loH + ((index * _HUE_STEP) % 1.0) * (hiH - loH)
+    l = 0.32 + ((index * _LGT_STEP) % 1.0) * 0.36  # wide enough for a "dark green"-style low end, never near-black
+    s = 0.55 + ((index * _SAT_STEP) % 1.0) * 0.40  # stay vivid, never washed out
+    return [int(v * 255) for v in hls_to_rgb(h, l, s)]
+
+
 def toContourObjs(slot, fileBytes, scan):
     structSet = dcm.dcmread(BytesIO(fileBytes), force=True)
 
@@ -116,10 +139,7 @@ def toContourObjs(slot, fileBytes, scan):
         number = int(roi_item.ReferencedROINumber)
         name = roi_names.get(number, f"contour_{number}")
 
-        h = np.random.random() * 0.5 + (0.5 * int(slot == "A"))
-        l = np.random.random() * 0.5 + 0.25
-        s = np.random.random() * 0.75 + 0.125
-        color = [int(v * 255) for v in hls_to_rgb(h, l, s)]
+        color = _contourColor(slot, i)
 
         mask = np.zeros((depth, height, width), dtype=bool)
         contour_seq = getattr(roi_item, "ContourSequence", [])
