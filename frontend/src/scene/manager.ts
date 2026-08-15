@@ -383,12 +383,13 @@ export default class SceneManager {
         opacity: number,
         visible: boolean,
         partial: boolean,
+        vertexColors?: number[],
     ) {
         const d = this.dataset[slot]
         this.removeContour(slot, id)
 
         const renderer = partial ? renderPartial : renderFull
-        const obj = renderer(mesh, color, opacity)
+        const obj = renderer(mesh, color, opacity, vertexColors)
         obj.visible = visible
         d.inner.add(obj)
         d.outs[id] = obj

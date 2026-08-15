@@ -3,7 +3,7 @@ import { ResponseMesh } from '../types'
 import { toWorld } from './coords'
 
 
-export function bufferGeom(mesh: ResponseMesh): THREE.BufferGeometry {
+export function bufferGeom(mesh: ResponseMesh, colors?: number[]): THREE.BufferGeometry {
 	// backend vertices are in raw DICOM patient space (mm) — every other object in the
 	// scene (slice planes, axes, anchor math) is routed through toWorld() before being
 	// handed to Three.js, so this needs the same remap or it renders in a sheared,
@@ -22,17 +22,31 @@ export function bufferGeom(mesh: ResponseMesh): THREE.BufferGeometry {
 	geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
 	geometry.setIndex(new THREE.BufferAttribute(new Uint32Array(mesh.faces), 1))
 	geometry.computeVertexNormals()
+
+	// distance-map mode ("DMap" button): per-vertex color baked server-side (see backend
+	// image.py::distanceColorsFlat), 0-255 ints normalized to Three.js's expected 0-1 range
+	if (colors) {
+		const colorAttr = new Float32Array(colors.length)
+		for (let i = 0; i < colors.length; i++)
+			colorAttr[i] = colors[i] / 255
+		geometry.setAttribute('color', new THREE.BufferAttribute(colorAttr, 3))
+	}
+
 	return geometry
 }
 
 export const renderFull = (
 	mesh: ResponseMesh,
 	color: [number, number, number],
-	opacity: number
+	opacity: number,
+	vertexColors?: number[]
 ): THREE.Mesh  => {
-	const geometry = bufferGeom(mesh)
+	const geometry = bufferGeom(mesh, vertexColors)
 	const material = new THREE.MeshStandardMaterial({
-		color: new THREE.Color(color[0] / 255, color[1] / 255, color[2] / 255),
+		// vertex colors multiply the material's base color, so use white when they're
+		// present to avoid tinting them with the (now-unused) flat contour color
+		color: vertexColors ? new THREE.Color(1, 1, 1) : new THREE.Color(color[0] / 255, color[1] / 255, color[2] / 255),
+		vertexColors: !!vertexColors,
 		transparent: opacity < 1,
 		opacity,
 		side: THREE.FrontSide,
@@ -48,11 +62,13 @@ export const renderFull = (
 export const renderPartial = (
 	mesh: ResponseMesh,
 	color: [number, number, number],
-	opacity: number
+	opacity: number,
+	vertexColors?: number[]
 ): THREE.Mesh => {
-	const geometry = bufferGeom(mesh)
+	const geometry = bufferGeom(mesh, vertexColors)
 	const material = new THREE.MeshStandardMaterial({
-		color: new THREE.Color(color[0] / 255, color[1] / 255, color[2] / 255),
+		color: vertexColors ? new THREE.Color(1, 1, 1) : new THREE.Color(color[0] / 255, color[1] / 255, color[2] / 255),
+		vertexColors: !!vertexColors,
 		transparent: true,
 		opacity,
 		side: THREE.DoubleSide,

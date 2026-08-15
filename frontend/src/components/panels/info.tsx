@@ -161,6 +161,8 @@ const ContentLoaded = ({ slot }: { slot: string }) => {
     const _onClickContourDMap = (e: React.MouseEvent, slot: string, id: string) => {
         console.log('_onClickContourDMap', slot, id)
         e.stopPropagation()
+
+        state.toggleContourDMap(slot, id)
     }
 
     return (
@@ -236,6 +238,17 @@ const ContentLoaded = ({ slot }: { slot: string }) => {
                     else if (state.selected.length > 0)
                         selectDecorator = 'info-contour-action-img-unselected'
 
+                    // DMap needs a target to compute a distance map against at all (backend
+                    // 400s otherwise), and the target has no meaningful distance map of
+                    // itself (~0 everywhere inside its own mask) — disable accordingly
+                    const dmapDisabled = ds.targetID === 'unknown' || c.id === ds.targetID
+
+                    let dmapDecorator = ''
+                    if (state.dmapContours.some(s => s.slot === slot && s.id === c.id))
+                        dmapDecorator = 'info-contour-action-img-selected'
+                    else if (state.dmapContours.length > 0)
+                        dmapDecorator = 'info-contour-action-img-unselected'
+
                     return <div key={c.id} className="info-contour-item-container">
                         <button className='info-contour-item' onClick={e => _onClickContour(e, slot, c.id)}>
                             <div className={`info-contour-label ${c.visible ? 'info-contour-label-active' : ''}`}>
@@ -253,8 +266,12 @@ const ContentLoaded = ({ slot }: { slot: string }) => {
                             <button className='info-contour-action' onClick={e => _onClickContourSelect(e, slot, c.id)}>
                                 <img className={`info-contour-action-img ${selectDecorator}`} src={Select} alt="S" />
                             </button>
-                            <button className='info-contour-action' onClick={e => _onClickContourDMap(e, slot, c.id)}>
-                                <img className='info-contour-action-img' src={DMap} alt="D" />
+                            <button
+                                className={`info-contour-action ${dmapDisabled ? 'info-contour-action-disabled' : ''}`}
+                                onClick={e => _onClickContourDMap(e, slot, c.id)}
+                                disabled={dmapDisabled}
+                            >
+                                <img className={`info-contour-action-img ${dmapDisabled ? '' : dmapDecorator}`} src={DMap} alt="D" />
                             </button>
                         </div>
                     </div>

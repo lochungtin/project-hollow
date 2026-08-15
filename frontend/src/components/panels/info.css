@@ -273,6 +273,15 @@
     border-color: var(--accent-dim);
 }
 
+.info-contour-action-disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+}
+
+.info-contour-action-disabled:hover {
+    border-color: var(--border-soft);
+}
+
 .info-contour-action-img {
     filter: invert(35%) sepia(9%) saturate(3304%) hue-rotate(220deg) brightness(88%) contrast(84%);
     width: 15px;

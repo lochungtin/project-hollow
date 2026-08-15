@@ -222,3 +222,103 @@ def maskToURL(mask, color):
     Image.fromarray(rgba, mode="RGBA").save(buffer, format="PNG")
     rt = f"data:image/png;base64,{base64.b64encode(buffer.getvalue()).decode("ascii")}"
     return rt
+
+
+# --- Distance-map visualization ("DMap" button)
+# Red (small values) -> blue (large values), passing through purple at the midpoint since
+# red and blue are both partially present there — a direct, literal reading of "red small,
+# blue large" rather than a borrowed perceptual colormap.
+def _distanceColor(t):
+    t = np.clip(t, 0.0, 1.0)
+    r = ((1.0 - t) * 255.0).astype(np.uint8)
+    b = (t * 255.0).astype(np.uint8)
+    g = np.zeros_like(r)
+    return r, g, b
+
+
+def _normalize(values, vmin, vmax):
+    if vmax - vmin < 1e-6:
+        return np.zeros_like(values, dtype=np.float64)
+    return np.clip((values - vmin) / (vmax - vmin), 0.0, 1.0)
+
+
+# fieldToURL is maskToURL's distance-map counterpart: same interior/boundary alpha split,
+# but RGB comes from the colormap above evaluated per-pixel on `field`, instead of a flat
+# `color` tuple.
+def fieldToURL(mask, field, vmin, vmax):
+    mask = np.asarray(mask, dtype=bool)
+    boundary = mask & ~binary_erosion(mask)
+    interior = mask & ~boundary
+
+    r, g, b = _distanceColor(_normalize(field, vmin, vmax))
+
+    rgba = np.zeros((*mask.shape, 4), dtype=np.uint8)
+    for ch, plane in enumerate((r, g, b)):
+        rgba[..., ch][interior] = plane[interior]
+        rgba[..., ch][boundary] = plane[boundary]
+    rgba[..., 3][interior] = round(0.4 * 255)
+    rgba[..., 3][boundary] = round(0.6 * 255)
+
+    buffer = BytesIO()
+    Image.fromarray(rgba, mode="RGBA").save(buffer, format="PNG")
+    rt = f"data:image/png;base64,{base64.b64encode(buffer.getvalue()).decode("ascii")}"
+    return rt
+
+
+# Cardinal-axis distance-map cross-section: `field` (a full-volume scalar array, same shape
+# as `mask`/scan.array) sliced identically to `mask`, colorized via fieldToURL instead of a
+# flat contour color. `vmin`/`vmax` are passed in (computed by the caller from the full 3D
+# masked field) rather than recomputed per-slice, so the color scale stays fixed as the user
+# scrolls instead of renormalizing every frame.
+def orthogonalScalarMask(scan, mask, field, vmin, vmax, ax, idx):
+    idx, c, dU, dV, width, height = _orthogonalGeometry(scan, ax, idx)
+    maskImg = _orthogonalSlice(mask, ax, idx)
+    fieldImg = _orthogonalSlice(field, ax, idx)
+    return Slice(url=fieldToURL(maskImg, fieldImg, vmin, vmax), center=c, dU=dU, dV=dV, width=width, height=height)
+
+
+# Arbitrary-orientation counterpart to orthogonalScalarMask, positioned identically to
+# arbitraryMask/arbitrary() (same _arbitraryGrid call). The mask is sampled with order=0
+# (nearest) like arbitraryMask, the scalar field with order=1 (linear) like arbitrary() uses
+# for the grayscale scan.
+def arbitraryScalarMask(scan, mask, field, vmin, vmax, anchor, normal, idx):
+    pts, center, u, v, extent = _arbitraryGrid(scan, anchor, normal, idx)
+
+    maskSampled = map_coordinates(mask.astype(np.uint8), pts, order=0, mode="constant", cval=0) > 0
+    fieldSampled = map_coordinates(field, pts, order=1, mode="nearest")
+
+    return Slice(
+        url=fieldToURL(maskSampled, fieldSampled, vmin, vmax),
+        center=tuple(center.tolist()),
+        dU=tuple(u.tolist()),
+        dV=tuple(v.tolist()),
+        width=extent,
+        height=extent,
+    )
+
+
+# Interpolated lookup of a full-volume scalar field (e.g. a distance map) at a mesh's own
+# vertices. Mesh vertices are already in patient-space mm (see models/mesh.py::Mesh.fromArr);
+# this inverts that same origin/spacing mapping back to fractional voxel indices instead of
+# touching marching-cubes internals.
+def sampleField(scan, field, verticesMM):
+    verts = np.asarray(verticesMM, dtype=np.float64).reshape(-1, 3)
+    oX, oY, oZ = scan.origin
+    sZ, sY, sX = scan.spacing
+
+    idxX = (verts[:, 0] - oX) / sX
+    idxY = (verts[:, 1] - oY) / sY
+    idxZ = (verts[:, 2] - oZ) / sZ
+
+    return map_coordinates(field, [idxZ, idxY, idxX], order=1, mode="nearest")
+
+
+# Per-vertex color payload for the 3D DMap mesh response: flattened [r,g,b,r,g,b,...] to
+# align 1:1 with Mesh.summary()'s flattened `vertices` list.
+def distanceColorsFlat(values, vmin, vmax):
+    r, g, b = _distanceColor(_normalize(np.asarray(values), vmin, vmax))
+    colors = np.empty(r.size * 3, dtype=np.uint8)
+    colors[0::3] = r
+    colors[1::3] = g
+    colors[2::3] = b
+    return colors.tolist()

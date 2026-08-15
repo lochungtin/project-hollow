@@ -1,4 +1,4 @@
-import { Dataset, HTTPPayload, ResponseMesh, ResponseSlice, ResultStore, Vec3D } from "../types"
+import { Dataset, HTTPPayload, ResponseMesh, ResponseMeshDMap, ResponseSlice, ResultStore, Vec3D } from "../types"
 
 // --- EXPOSED APIS
 // rehydrate cached data
@@ -55,6 +55,17 @@ export const getContourSlice = (slot: string, id: string, ax: string, idx: numbe
 
 export const getArbitraryContourSlice = (slot: string, id: string, normal: Vec3D, idx: number): Promise<ResponseSlice> =>
     _get(`/api/dataset/${slot}/contour/${id}/slice/arbitrary/${idx}?nx=${normal[0]}&ny=${normal[1]}&nz=${normal[2]}`)
+
+// distance-map ("DMap" button) counterparts — same shapes/semantics as the plain contour
+// mesh/slice endpoints above, colored by the current target's distance map instead
+export const getContourDMap = (slot: string, id: string): Promise<ResponseMeshDMap> =>
+    _get(`/api/dataset/${slot}/contour/${id}/dmap/mesh`)
+
+export const getContourDMapSlice = (slot: string, id: string, ax: string, idx: number): Promise<ResponseSlice> =>
+    _get(`/api/dataset/${slot}/contour/${id}/dmap/slice/${ax}/${idx}`)
+
+export const getArbitraryContourDMapSlice = (slot: string, id: string, normal: Vec3D, idx: number): Promise<ResponseSlice> =>
+    _get(`/api/dataset/${slot}/contour/${id}/dmap/slice/arbitrary/${idx}?nx=${normal[0]}&ny=${normal[1]}&nz=${normal[2]}`)
 
 // get contour nearside surface
 export const getNearside = (slot: string, id: string): Promise<ResponseMesh> => 

@@ -3,7 +3,16 @@ import numpy as np
 from fastapi import APIRouter, HTTPException, UploadFile
 
 from ..models.dataset import Dataset
-from ..models.image import arbitrary, arbitraryMask, orthogonal, orthogonalMask
+from ..models.image import (
+    arbitrary,
+    arbitraryMask,
+    arbitraryScalarMask,
+    distanceColorsFlat,
+    orthogonal,
+    orthogonalMask,
+    orthogonalScalarMask,
+    sampleField,
+)
 from ..parser import toContourObjs, toScanObj
 from ..storage import (
     clearDataset,
@@ -177,6 +186,89 @@ def getContourSlice(slot: str, id: str, ax: str, idx: int):
     contour = dataset.contours[id]
     mask = contour.mask.mask.cpu().numpy()
     return orthogonalMask(dataset.scan, mask, contour.color, ax, idx).summary()
+
+
+# --- DISTANCE MAP ("DMap" button)
+# Visualizes the current target's distance map (guava_rt: Region.target_dmap, i.e.
+# target_mask.dmap() — an unsigned Euclidean distance transform of ~target_mask, 0 inside the
+# target and growing outward) restricted to a given contour's own shape. No gv.Region needed:
+# dataset.contours[targetID].mask *is* the same gv.Mask object the region would build from,
+# so calling .dmap() directly reuses its self-caching with no new storage/invalidation wiring.
+def _targetDMapField(dataset):
+    if dataset.targetID not in dataset.contours:
+        raise HTTPException(400, "Error: no target set for this dataset")
+
+    sZ, sY, sX = dataset.scan.spacing  # isometric post-resample -> mm scale factor
+    return dataset.contours[dataset.targetID].mask.dmap().cpu().numpy() * sX
+
+
+# fixed across every contour in the dataset (not per-contour, not per-slice), so the same
+# distance value always maps to the same color everywhere: scrolling, switching between the
+# 3D mesh and 2D cross-section, and comparing two different contours' DMap renders all stay
+# on one consistent scale. Computed over the union of every contour's own voxels (not the raw
+# full scan volume) so the range isn't dominated by irrelevant background far outside any
+# structure of interest.
+def _globalDMapRange(dataset, field):
+    masks = [c.mask.mask.cpu().numpy() for c in dataset.contours.values()]
+    if not masks:
+        return 0.0, 0.0
+
+    union = masks[0]
+    for m in masks[1:]:
+        union = union | m
+
+    vals = field[union]
+    if vals.size == 0:
+        return 0.0, 0.0
+    return float(vals.min()), float(vals.max())
+
+
+@router.get("/{slot}/contour/{id}/dmap/mesh")
+def getContourDMap(slot: str, id: str):
+    dataset = getDataset(slot)
+    if id not in dataset.contours:
+        raise HTTPException(404, f"Error: no contour with id: {id} found")
+
+    contour = dataset.contours[id]
+    field = _targetDMapField(dataset)
+    vmin, vmax = _globalDMapRange(dataset, field)
+
+    values = sampleField(dataset.scan, field, contour.mesh.vertices)
+    colors = distanceColorsFlat(values, vmin, vmax)
+
+    return {**contour.summary(), **contour.mesh.summary(), "colors": colors}
+
+
+# same registration-order caveat as the plain contour-slice routes above: arbitrary must
+# come first, or the generic {ax} route below would swallow "arbitrary" too.
+@router.get("/{slot}/contour/{id}/dmap/slice/arbitrary/{idx}")
+def getArbitraryContourDMap(slot: str, id: str, idx: int, nx: float, ny: float, nz: float):
+    dataset = getDataset(slot)
+    if id not in dataset.contours:
+        raise HTTPException(404, f"Error: no contour with id: {id} found")
+
+    contour = dataset.contours[id]
+    field = _targetDMapField(dataset)
+    mask = contour.mask.mask.cpu().numpy()
+    vmin, vmax = _globalDMapRange(dataset, field)
+
+    return arbitraryScalarMask(
+        dataset.scan, mask, field, vmin, vmax, dataset.anchor, (nx, ny, nz), idx
+    ).summary()
+
+
+@router.get("/{slot}/contour/{id}/dmap/slice/{ax}/{idx}")
+def getContourDMapSlice(slot: str, id: str, ax: str, idx: int):
+    dataset = getDataset(slot)
+    if id not in dataset.contours:
+        raise HTTPException(404, f"Error: no contour with id: {id} found")
+
+    contour = dataset.contours[id]
+    field = _targetDMapField(dataset)
+    mask = contour.mask.mask.cpu().numpy()
+    vmin, vmax = _globalDMapRange(dataset, field)
+
+    return orthogonalScalarMask(dataset.scan, mask, field, vmin, vmax, ax, idx).summary()
 
 
 @router.get("/{slot}/nearside/{id}")

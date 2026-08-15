@@ -32,6 +32,9 @@ export type AppState = {
     'selected': SelectedContour[],
     'toggleContourSelect': (slot: string, id: string) => void,
 
+    'dmapContours': SelectedContour[],
+    'toggleContourDMap': (slot: string, id: string) => void,
+
     'jobs': Job[],
     'removeJob': (job: Job) => void,
 
@@ -189,4 +192,11 @@ export type ResponseMesh = {
     'faces': number[],
     'vertex_count': number,
     'face_count': number,
+}
+
+// distance-map mesh response ("DMap" button): same shape as ResponseMesh, plus a flattened
+// [r,g,b,r,g,b,...] per-vertex color list (see backend image.py::distanceColorsFlat) to use
+// instead of `color` when rendering
+export type ResponseMeshDMap = ResponseMesh & {
+    'colors': number[],
 }

@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react'
-import { getArbitraryContourSlice, getArbitrarySlice, getContour, getContourSlice, getOrthogonal } from '../../api/client'
+import { getArbitraryContourDMapSlice, getArbitraryContourSlice, getArbitrarySlice, getContour, getContourDMap, getContourDMapSlice, getContourSlice, getOrthogonal } from '../../api/client'
 import SceneManager from '../../scene/manager'
 import { arbitraryMaxIdx, arbitrarySliceGeometry, axisFrame, render, renderBlack, renderOverlay, sliceGeometry } from '../../scene/scan'
 import { useAppState } from '../../state'
-import { Axis, Scan, SliceState, Vec3D } from '../../types'
+import { Axis, Contour, Scan, SliceState, Vec3D } from '../../types'
 import './view.css'
 
 
@@ -126,6 +126,34 @@ const ViewPane = () => {
         }
     }
 
+    // distance-map mode ("DMap" button): whether a given contour is currently shown against
+    // the target's distance map instead of its flat color, in both the 3D mesh and 2D
+    // overlay paths below
+    const isDMap = (slot: string, id: string): boolean =>
+        refState.current.dmapContours.some(s => s.slot === slot && s.id === id)
+
+    // 3D-mesh fetch+render for a single contour, shared by the contour-sync effect (new
+    // contours) and the dmap-toggle effect below (re-rendering an existing one) — branches
+    // between the flat-color and distance-map-colored mesh endpoints/renderers.
+    const loadContourMesh = async (slot: string, contour: Contour): Promise<void> => {
+        const scene = refScene.current
+        if (!scene)
+            return
+
+        const visible = contour.visible && !sliceMode.current
+        try {
+            if (isDMap(slot, contour.id)) {
+                const mesh = await getContourDMap(slot, contour.id)
+                scene.renderContour(slot, contour.id, mesh, contour.color, 0.7, visible, false, mesh.colors)
+            } else {
+                const mesh = await getContour(slot, contour.id)
+                scene.renderContour(slot, contour.id, mesh, contour.color, 0.7, visible, false)
+            }
+        } catch (err) {
+            console.error(`Failed to render contour ${contour.id}`, err)
+        }
+    }
+
     // contour slice-overlay mode ("M" key): draws each visible contour's cross-section at
     // the same idx/mode/normal as the scan slice above (own race-guard token, since this
     // fetches per-contour and shouldn't be blocked by the scan slice's own in-flight request).
@@ -165,9 +193,14 @@ const ViewPane = () => {
 
         await Promise.all(visibleContours.map(async (contour, i) => {
             try {
+                const dmap = isDMap(slot, contour.id)
                 const res = isArbitrary
-                    ? await getArbitraryContourSlice(slot, contour.id, slice.normal, idx)
-                    : await getContourSlice(slot, contour.id, slice.mode, idx)
+                    ? dmap
+                        ? await getArbitraryContourDMapSlice(slot, contour.id, slice.normal, idx)
+                        : await getArbitraryContourSlice(slot, contour.id, slice.normal, idx)
+                    : dmap
+                        ? await getContourDMapSlice(slot, contour.id, slice.mode, idx)
+                        : await getContourSlice(slot, contour.id, slice.mode, idx)
                 if (refContourOpToken.current[slot] !== token)
                     return
 
@@ -485,10 +518,7 @@ const ViewPane = () => {
             
             contours.forEach(contour => {
                 if (!scene.rendered(slot, contour.id)) {
-                    getContour(slot, contour.id).then(mesh => {
-                        scene.renderContour(slot, contour.id, mesh, contour.color, 0.7, mesh.visible && !sliceMode.current, false)
-                        syncContourMode(slot)
-                    }).catch(err => console.error(`Failed to render contour ${contour.id}`, err))
+                    loadContourMesh(slot, contour).then(() => syncContourMode(slot))
                 }
             })
 
@@ -504,6 +534,27 @@ const ViewPane = () => {
             syncContourMode(slot)
         })
     }, [JSON.stringify(state.dataset['A']?.contours), JSON.stringify(state.dataset['B']?.contours)])
+
+    // distance-map mode toggle ("DMap" button, info.tsx): re-render every already-rendered
+    // contour's 3D mesh (flat color <-> distance-map vertex colors require different
+    // geometry/material, not just a visibility flip) and refresh 2D overlays to match
+    useEffect(() => {
+        const scene = refScene.current
+        if (!scene)
+            return
+
+        ;['A', 'B'].forEach(slot => {
+            const dataset = state.dataset[slot]
+            if (!dataset)
+                return
+
+            Object.values(dataset.contours).forEach(contour => {
+                if (scene.rendered(slot, contour.id))
+                    loadContourMesh(slot, contour)
+            })
+            refreshContourSlices(slot)
+        })
+    }, [JSON.stringify(state.dmapContours)])
 
 
     return (

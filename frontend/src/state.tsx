@@ -42,6 +42,10 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 	// handler) — the normal is the direction between their centers of mass
 	const [selected, setSelected] = useState<SelectedContour[]>([])
 
+	// contours currently rendered via the target's distance map ("DMap" button) instead of
+	// their flat color — any number at once, unlike `selected`'s 2-item cap
+	const [dmapContours, setDMapContours] = useState<SelectedContour[]>([])
+
 	const [jobs, setJobs] = useState<Job[]>([])
 	const [results, setResults] = useState<ResultStore>({'bsd': {}, 'disp': {}, 'sepd': {}, 'divh': [], 'sepdn': {}})
 
@@ -206,6 +210,10 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 			const ds = await updateTargetAPI(slot, target)
 			setDataset((prev) => ({ ...prev, [slot]: ds }))
 			setResults((prev) => ({ ...prev, divh: [], sepd: {}, sepdn: {} }))
+
+			// the DMap button is disabled for whichever contour is the target (its own
+			// distance map is trivial), so drop it out of dmap mode if it was already toggled
+			setDMapContours((prev) => prev.filter((s) => !(s.slot === slot && s.id === target)))
 		} catch (err) {
 			console.error(JSON.stringify(err))
 		}
@@ -224,6 +232,21 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 			}
 			if (prev.length >= 2)
 				return prev
+			return [...prev, { slot, id }]
+		})
+	}, [])
+
+	// --- CONTOUR DISTANCE MAP ("DMap" button)
+	// local-only, no cap — any number of contours can be shown against the target's distance
+	// map simultaneously
+	const toggleContourDMap = useCallback((slot: string, id: string) => {
+		setDMapContours((prev) => {
+			const idx = prev.findIndex((s) => s.slot === slot && s.id === id)
+			if (idx !== -1) {
+				const copy = [...prev]
+				copy.splice(idx, 1)
+				return copy
+			}
 			return [...prev, { slot, id }]
 		})
 	}, [])
@@ -269,6 +292,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 		updateAnchor, updateAlignment, localAnchorMM, localAnchorPX,
 		updateTarget,
 		selected, toggleContourSelect,
+		dmapContours, toggleContourDMap,
 		jobs, removeJob,
 		trigger, results,
 		getDiVH, divh
@@ -282,6 +306,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 		updateAnchor, updateAlignment, localAnchorMM, localAnchorPX,
 		updateTarget,
 		selected, toggleContourSelect,
+		dmapContours, toggleContourDMap,
 		jobs, removeJob,
 		trigger, results,
 		getDiVH, divh
