@@ -273,7 +273,7 @@ export default class SceneManager {
         outer.add(inner)
         this.scene.add(outer)
 
-        return { inner, outer, 'anchor':[0, 0, 0], 'outs': {}, 'slices': {}, 'axes': null }
+        return { inner, outer, 'anchor':[0, 0, 0], 'outs': {}, 'slices': {}, 'overlays': {}, 'axes': null }
     }
 
     removeDataset(slot: string) {
@@ -334,6 +334,44 @@ export default class SceneManager {
     setScanVisibility(slot: string, visible: boolean) {
         const d = this.dataset[slot]
         Object.values(d.slices).forEach(obj => { obj.visible = visible })
+    }
+
+    // --- SLICE-MODE OVERLAYS ("M" key)
+    // Separate from `slices` so setScanVisibility's sweep never touches these — per-contour
+    // overlay planes ('contour:{id}') stay visible/hidden independently of whether the real
+    // scan slice is shown.
+    setOverlay(slot: string, key: string, obj: THREE.Object3D | null) {
+        const d = this.dataset[slot]
+        if (key in d.overlays) {
+            d.inner.remove(d.overlays[key])
+            disposeObj(d.overlays[key])
+            delete d.overlays[key]
+        }
+        if (obj) {
+            d.inner.add(obj)
+            d.overlays[key] = obj
+        }
+    }
+
+    clearOverlays(slot: string) {
+        const d = this.dataset[slot]
+        Object.values(d.overlays).forEach(p => {
+            d.inner.remove(p)
+            disposeObj(p)
+        })
+        d.overlays = {}
+    }
+
+    // removes only overlays whose key isn't in `keepKeys`, leaving the rest untouched — used
+    // instead of clearOverlays for a scroll-driven refresh, so a contour that's still visible
+    // keeps showing its previous (slightly stale) overlay until the new one is ready, rather
+    // than flashing blank on every tick while the replacement is still in flight
+    pruneOverlays(slot: string, keepKeys: Set<string>) {
+        const d = this.dataset[slot]
+        Object.keys(d.overlays).forEach(key => {
+            if (!keepKeys.has(key))
+                this.setOverlay(slot, key, null)
+        })
     }
 
     // --- CONTOUR / SURFACE

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
-import { getArbitrarySlice, getContour, getOrthogonal } from '../../api/client'
+import { getArbitraryContourSlice, getArbitrarySlice, getContour, getContourSlice, getOrthogonal } from '../../api/client'
 import SceneManager from '../../scene/manager'
-import { arbitraryMaxIdx, arbitrarySliceGeometry, axisFrame, render, renderBlack, sliceGeometry } from '../../scene/scan'
+import { arbitraryMaxIdx, arbitrarySliceGeometry, axisFrame, render, renderBlack, renderOverlay, sliceGeometry } from '../../scene/scan'
 import { useAppState } from '../../state'
 import { Axis, Scan, SliceState, Vec3D } from '../../types'
 import './view.css'
@@ -40,12 +40,14 @@ const ViewPane = () => {
 
     const spaceHeld = useRef(false)
     const dualMode = useRef(false)
+    const sliceMode = useRef(false)
 
     const refState = useRef(state)
     const refActiveSlot = useRef(state.activeSlot)
 
     const refSlice = useRef<Record<string, SliceState>>({ 'A': sliceState([0, 0, 0]), 'B': sliceState([0, 0, 0]) })
     const refOpToken = useRef<Record<string, number>>({ 'A': 0, 'B': 0 })
+    const refContourOpToken = useRef<Record<string, number>>({ 'A': 0, 'B': 0 })
 
     const refScanID = useRef<Record<string, string>>({ 'A': '', 'B': '' })
     const refMeshID = useRef<Record<string, string>>({ 'A': '', 'B': '' })
@@ -100,6 +102,7 @@ const ViewPane = () => {
 
                 mesh.visible = ds.scan.visible
                 scene.setSlice(slot, 'primary', mesh)
+                refreshContourSlices(slot)
                 return
             }
 
@@ -115,11 +118,86 @@ const ViewPane = () => {
 
             mesh.visible = ds.scan.visible
             scene.setSlice(slot, 'primary', mesh)
+            refreshContourSlices(slot)
             console.log('Frame Update')
         }
         catch {
 
         }
+    }
+
+    // contour slice-overlay mode ("M" key): draws each visible contour's cross-section at
+    // the same idx/mode/normal as the scan slice above (own race-guard token, since this
+    // fetches per-contour and shouldn't be blocked by the scan slice's own in-flight request).
+    // A no-op (past clearing any stale overlays) whenever the mode isn't active.
+    const refreshContourSlices = async (slot: string): Promise<void> => {
+        const scene = refScene.current
+        const ds = refState.current.dataset[slot]
+
+        if (!scene || !ds)
+            return
+
+        const token = ++refContourOpToken.current[slot]
+
+        if (!sliceMode.current) {
+            scene.clearOverlays(slot)
+            return
+        }
+
+        const slice = refSlice.current[slot]
+        const idx = slice.idx[slice.mode]
+        const isArbitrary = slice.mode === 'arbitrary'
+        const minIdx = isArbitrary ? -arbitraryMaxIdx(ds.scan) : 0
+        const maxIdx = isArbitrary ? arbitraryMaxIdx(ds.scan) : getMaxIdx(ds.scan.shape, slice.mode)
+        const inRange = idx >= minIdx && idx <= maxIdx
+
+        const visibleContours = inRange ? Object.values(ds.contours).filter(c => c.visible) : []
+
+        // remove only what's no longer relevant (a contour that got hidden/removed) —
+        // anything still in `liveKeys` keeps showing its previous overlay untouched until
+        // setOverlay below atomically swaps in the replacement, so contours that stay visible
+        // across a scroll tick never flash blank while their new cross-section is still in flight
+        const liveKeys = new Set(visibleContours.map(c => `contour:${c.id}`))
+        scene.pruneOverlays(slot, liveKeys)
+
+        if (!inRange)
+            return
+
+        await Promise.all(visibleContours.map(async (contour, i) => {
+            try {
+                const res = isArbitrary
+                    ? await getArbitraryContourSlice(slot, contour.id, slice.normal, idx)
+                    : await getContourSlice(slot, contour.id, slice.mode, idx)
+                if (refContourOpToken.current[slot] !== token)
+                    return
+
+                const mesh = await renderOverlay(res)
+                if (refContourOpToken.current[slot] !== token)
+                    return
+
+                mesh.renderOrder = i + 1
+                scene.setOverlay(slot, `contour:${contour.id}`, mesh)
+            } catch {
+                /* ignore — skip this contour's overlay */
+            }
+        }))
+    }
+
+    // 'm' key + the contour-sync effect below both call this: hides/shows each already-
+    // rendered 3D contour mesh per `contour.visible && !sliceMode.current` (so slice mode
+    // hides the 3D surfaces without touching each contour's own visibility flag) and
+    // refreshes the 2D overlays to match.
+    const syncContourMode = (slot: string) => {
+        const scene = refScene.current
+        const dataset = refState.current.dataset[slot]
+        if (!scene || !dataset)
+            return
+
+        Object.values(dataset.contours).forEach(contour => {
+            if (scene.rendered(slot, contour.id))
+                scene.setContourVisibility(slot, contour.id, contour.visible && !sliceMode.current)
+        })
+        refreshContourSlices(slot)
     }
 
     useEffect(() => {
@@ -215,6 +293,11 @@ const ViewPane = () => {
                 // back. Force it off, same call, both loaded slots.
                 const loadedSlots = ['A', 'B'].filter(s => refState.current.dataset[s])
                 loadedSlots.forEach(s => refState.current.updateVisibility(s, 'scan', false))
+
+                // in slice mode, both slots' overlays need to sync immediately rather than
+                // waiting on the updateVisibility calls above to round-trip (or the next
+                // scroll) — dual mode's whole point is seeing both at once right away
+                loadedSlots.forEach(s => syncContourMode(s))
                 return
             }
 
@@ -297,7 +380,15 @@ const ViewPane = () => {
                 return
             }
 
-            
+            // contour slice-overlay mode — swap the 3D contour surfaces for a 2D overlay
+            // drawn onto the current slice plane (cardinal or arbitrary), on both loaded
+            // slots so switching the active slot doesn't leave one behind in the other mode.
+            if (e.key === 'm') {
+                sliceMode.current = !sliceMode.current
+                const loadedSlots = ['A', 'B'].filter(s => refState.current.dataset[s])
+                loadedSlots.forEach(s => syncContourMode(s))
+                return
+            }
         }
 
         const onKeyUp = (e: KeyboardEvent) => {
@@ -338,6 +429,9 @@ const ViewPane = () => {
             }
             scene.setDatasetTrans(slot, dataset.anchor, dataset.alignment, dataset.render.rotation)
             scene.setScanVisibility(slot, dataset.scan.visible)
+            // covers anchor/alignment/rotation/visibility-only changes — refreshSlice below
+            // covers new-scan-load
+            refreshContourSlices(slot)
 
             if (refScanID.current[slot] !== dataset.scan.id) {
                 refScanID.current[slot] = dataset.scan.id
@@ -392,10 +486,9 @@ const ViewPane = () => {
             contours.forEach(contour => {
                 if (!scene.rendered(slot, contour.id)) {
                     getContour(slot, contour.id).then(mesh => {
-                        scene.renderContour(slot, contour.id, mesh, contour.color, 0.7, mesh.visible, false)
+                        scene.renderContour(slot, contour.id, mesh, contour.color, 0.7, mesh.visible && !sliceMode.current, false)
+                        syncContourMode(slot)
                     }).catch(err => console.error(`Failed to render contour ${contour.id}`, err))
-                } else {
-                    scene.setContourVisibility(slot, contour.id, contour.visible)
                 }
             })
 
@@ -404,6 +497,11 @@ const ViewPane = () => {
                 contours.forEach(contour => {if (!liveIDs.has(contour.id)) rm.push(contour.id)})
                 rm.forEach((id) => scene.removeContour(slot, id))
             }
+
+            // handles visibility toggles on already-rendered contours, and refreshes the
+            // 2D overlays if slice mode is active (new contour add/remove is handled above,
+            // then re-synced again once each fetch resolves)
+            syncContourMode(slot)
         })
     }, [JSON.stringify(state.dataset['A']?.contours), JSON.stringify(state.dataset['B']?.contours)])
 

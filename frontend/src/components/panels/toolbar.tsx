@@ -23,6 +23,7 @@ const Toolbar = () => {
                     [D] dual mode &middot;
                     [1/2/3] change axis &middot;
                     [4] arbitrary axis &middot;
+                    [M] contour slice mode &middot;
                     [Scroll] slice &middot;
                     [Space + Scroll] rotate &middot;
                     [Ctrl + Scroll] zoom &middot;

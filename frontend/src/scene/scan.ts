@@ -146,6 +146,37 @@ export const render = (slice: ResponseSlice): Promise<THREE.Mesh> => new Promise
         rej
     )})
 
+// contour slice-overlay mode ("M" key): a transparent-background RGBA texture (baked fill/
+// outline alpha, see backend maskToURL) drawn at the scan slice's position, with no backing
+// of its own. depthWrite is off so multiple overlapping overlays (and whatever's behind
+// them — the scan plane, another slot's overlays in dual mode, or nothing) blend correctly
+// by renderOrder instead of fighting on depth.
+export const renderOverlay = (slice: ResponseSlice): Promise<THREE.Mesh> => new Promise((res, rej) => {
+    loader.load(
+        slice.url,
+        (texture) => {
+            texture.colorSpace = THREE.SRGBColorSpace
+            texture.minFilter = THREE.LinearFilter
+            texture.magFilter = THREE.LinearFilter
+            texture.generateMipmaps = false
+
+            const geom = new THREE.PlaneGeometry(Math.max(slice.width, 0.01), Math.max(slice.height, 0.01))
+            const mat = new THREE.MeshBasicMaterial({
+                map: texture,
+                side: THREE.DoubleSide,
+                transparent: true,
+                depthWrite: false,
+                toneMapped: false,
+            })
+
+            const mesh = new THREE.Mesh(geom, mat)
+            orientPlane(mesh, slice)
+            res(mesh)
+        },
+        undefined,
+        rej
+    )})
+
 // placeholder plane for slice indices outside the scan's valid range
 export const renderBlack = (slice: Omit<ResponseSlice, 'url'>): THREE.Mesh => {
     const geom = new THREE.PlaneGeometry(Math.max(slice.width, 0.01), Math.max(slice.height, 0.01))

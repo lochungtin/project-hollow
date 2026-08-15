@@ -4,7 +4,7 @@ from io import BytesIO
 
 import numpy as np
 from PIL import Image
-from scipy.ndimage import map_coordinates
+from scipy.ndimage import binary_erosion, map_coordinates
 
 
 @dataclass
@@ -27,11 +27,10 @@ class Slice:
         }
 
 
-def orthogonal(scan, ax, idx):
+def _orthogonalGeometry(scan, ax, idx):
     z, y, x = scan.shape
     sZ, sY, sX = scan.spacing
     oX, oY, oZ = scan.origin
-    # oX, oY, oZ = 0, 0, 0
     idx = max(0, min(idx, {"axial": z, "coronal": y, "sagittal": x}[ax] - 1))
 
     shX = (x - 1) * sX
@@ -55,14 +54,31 @@ def orthogonal(scan, ax, idx):
     dU = {"axial": (1, 0, 0), "coronal": (1, 0, 0), "sagittal": (0, 1, 0)}[ax]
     dV = {"axial": (0, -1, 0), "coronal": (0, 0, -1), "sagittal": (0, 0, -1)}[ax]
 
-    if ax == "axial":
-        img = scan.array[idx, :, :]
-    elif ax == "coronal":
-        img = scan.array[:, idx, :]
-    else:
-        img = scan.array[:, :, idx]
+    return idx, c, dU, dV, dims[0], dims[1]
 
-    return Slice(url=toURL(img), center=c, dU=dU, dV=dV, width=dims[0], height=dims[1])
+
+def _orthogonalSlice(array, ax, idx):
+    if ax == "axial":
+        return array[idx, :, :]
+    elif ax == "coronal":
+        return array[:, idx, :]
+    else:
+        return array[:, :, idx]
+
+
+def orthogonal(scan, ax, idx):
+    idx, c, dU, dV, width, height = _orthogonalGeometry(scan, ax, idx)
+    img = _orthogonalSlice(scan.array, ax, idx)
+    return Slice(url=toURL(img), center=c, dU=dU, dV=dV, width=width, height=height)
+
+
+# Cross-section of a contour's boolean mask (same shape/spacing/origin as scan.array — see
+# parser.toContourObjs) along the same cardinal axis/index as a scan slice, rendered as a
+# transparent-background colored overlay instead of a grayscale image.
+def orthogonalMask(scan, mask, color, ax, idx):
+    idx, c, dU, dV, width, height = _orthogonalGeometry(scan, ax, idx)
+    img = _orthogonalSlice(mask, ax, idx)
+    return Slice(url=maskToURL(img, color), center=c, dU=dU, dV=dV, width=width, height=height)
 
 
 def _orthonormalBasis(normal):
@@ -93,13 +109,14 @@ def _arbitraryDim(scan):
     return max(2, int(round(diag / spacing))), spacing
 
 
-# Arbitrary-orientation slice through `anchor` (absolute patient-space mm — the point that
-# maps to world origin), offset along `normal` by `idx` isometric-voxel steps. `dim` is sized
-# to the volume's bounding-box diagonal so the whole scan is covered regardless of the plane's
-# orientation, matching how the frontend independently derives the same bound for scroll
-# limits/black-frame placeholders (see scene/scan.ts::arbitrarySliceGeometry) without a
-# round-trip.
-def arbitrary(scan, anchor, normal, idx):
+# Sample-coordinate grid for an arbitrary-orientation plane through `anchor` (absolute
+# patient-space mm — the point that maps to world origin), offset along `normal` by `idx`
+# isometric-voxel steps. `dim` is sized to the volume's bounding-box diagonal so the whole
+# scan is covered regardless of the plane's orientation, matching how the frontend
+# independently derives the same bound for scroll limits/black-frame placeholders (see
+# scene/scan.ts::arbitrarySliceGeometry) without a round-trip. Shared by arbitrary() and
+# arbitraryMask() — the coordinate grid itself doesn't depend on which array gets sampled.
+def _arbitraryGrid(scan, anchor, normal, idx):
     n, u, v = _orthonormalBasis(normal)
     dim, spacing = _arbitraryDim(scan)
     oX, oY, oZ = scan.origin
@@ -125,17 +142,48 @@ def arbitrary(scan, anchor, normal, idx):
     ptsY = (py - oY) / sY
     ptsX = (px - oX) / sX
 
+    extent = dim * spacing
+    return (ptsZ, ptsY, ptsX), center, u, v, extent
+
+
+def arbitrary(scan, anchor, normal, idx):
+    pts, center, u, v, extent = _arbitraryGrid(scan, anchor, normal, idx)
+
     sampled = map_coordinates(
         scan.array,
-        [ptsZ, ptsY, ptsX],
+        pts,
         order=1,
         mode="constant",
         cval=float(scan.array.min()),
     )
 
-    extent = dim * spacing
     return Slice(
         url=toURL(sampled),
+        center=tuple(center.tolist()),
+        dU=tuple(u.tolist()),
+        dV=tuple(v.tolist()),
+        width=extent,
+        height=extent,
+    )
+
+
+# Arbitrary-orientation cross-section of a contour's boolean mask, positioned identically to
+# arbitrary() (same _arbitraryGrid call) so the overlay lines up pixel-for-pixel with the
+# scan slice it's drawn on top of. order=0 (nearest) instead of arbitrary()'s order=1
+# (linear) — the source is boolean and shouldn't blur into fractional values at edges.
+def arbitraryMask(scan, mask, color, anchor, normal, idx):
+    pts, center, u, v, extent = _arbitraryGrid(scan, anchor, normal, idx)
+
+    sampled = map_coordinates(
+        mask.astype(np.uint8),
+        pts,
+        order=0,
+        mode="constant",
+        cval=0,
+    ) > 0
+
+    return Slice(
+        url=maskToURL(sampled, color),
         center=tuple(center.tolist()),
         dU=tuple(u.tolist()),
         dV=tuple(v.tolist()),
@@ -153,5 +201,24 @@ def toURL(arr):
 
     buffer = BytesIO()
     Image.fromarray(norm, mode="L").save(buffer, format="PNG")
+    rt = f"data:image/png;base64,{base64.b64encode(buffer.getvalue()).decode("ascii")}"
+    return rt
+
+
+# Transparent-background colored overlay for a 2D boolean mask: interior at 0.4 opacity,
+# a one-voxel boundary ring (mask minus its erosion, same technique guava_rt.Mask.surface()
+# uses in 3D) at 0.6 opacity, fully transparent everywhere else. A mask with no True pixels
+# (contour doesn't intersect this slice) naturally produces an all-transparent image.
+def maskToURL(mask, color):
+    mask = np.asarray(mask, dtype=bool)
+    boundary = mask & ~binary_erosion(mask)
+    interior = mask & ~boundary
+
+    rgba = np.zeros((*mask.shape, 4), dtype=np.uint8)
+    rgba[interior] = [*color, round(0.4 * 255)]
+    rgba[boundary] = [*color, round(0.6 * 255)]
+
+    buffer = BytesIO()
+    Image.fromarray(rgba, mode="RGBA").save(buffer, format="PNG")
     rt = f"data:image/png;base64,{base64.b64encode(buffer.getvalue()).decode("ascii")}"
     return rt

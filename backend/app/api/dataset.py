@@ -3,7 +3,7 @@ import numpy as np
 from fastapi import APIRouter, HTTPException, UploadFile
 
 from ..models.dataset import Dataset
-from ..models.image import arbitrary, orthogonal
+from ..models.image import arbitrary, arbitraryMask, orthogonal, orthogonalMask
 from ..parser import toContourObjs, toScanObj
 from ..storage import (
     clearDataset,
@@ -151,6 +151,32 @@ def getContour(slot: str, id: str):
 
     contour = dataset.contours[id]
     return {**contour.summary(), **contour.mesh.summary()}
+
+
+# Contour's 2D cross-section at the same axis/index a scan slice would use, rendered as a
+# transparent-background colored overlay (see maskToURL) instead of the full 3D mesh — used
+# by the frontend's slice-overlay ("M" key) mode. Same registration-order caveat as the scan
+# slice routes above: arbitrary must come first, or {ax} would swallow "arbitrary" too.
+@router.get("/{slot}/contour/{id}/slice/arbitrary/{idx}")
+def getArbitraryContourSlice(slot: str, id: str, idx: int, nx: float, ny: float, nz: float):
+    dataset = getDataset(slot)
+    if id not in dataset.contours:
+        raise HTTPException(404, f"Error: no contour with id: {id} found")
+
+    contour = dataset.contours[id]
+    mask = contour.mask.mask.cpu().numpy()
+    return arbitraryMask(dataset.scan, mask, contour.color, dataset.anchor, (nx, ny, nz), idx).summary()
+
+
+@router.get("/{slot}/contour/{id}/slice/{ax}/{idx}")
+def getContourSlice(slot: str, id: str, ax: str, idx: int):
+    dataset = getDataset(slot)
+    if id not in dataset.contours:
+        raise HTTPException(404, f"Error: no contour with id: {id} found")
+
+    contour = dataset.contours[id]
+    mask = contour.mask.mask.cpu().numpy()
+    return orthogonalMask(dataset.scan, mask, contour.color, ax, idx).summary()
 
 
 @router.get("/{slot}/nearside/{id}")

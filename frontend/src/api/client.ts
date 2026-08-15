@@ -45,8 +45,16 @@ export const getArbitrarySlice = (slot: string, normal: Vec3D, idx: number): Pro
     _get(`/api/dataset/${slot}/slice/arbitrary/${idx}?nx=${normal[0]}&ny=${normal[1]}&nz=${normal[2]}`)
 
 // get contour mesh
-export const getContour = (slot: string, id: string): Promise<ResponseMesh> => 
+export const getContour = (slot: string, id: string): Promise<ResponseMesh> =>
     _get(`/api/dataset/${slot}/contour/${id}`)
+
+// get a contour's 2D cross-section at the same axis/index a scan slice would use (slice
+// overlay mode, "M" key)
+export const getContourSlice = (slot: string, id: string, ax: string, idx: number): Promise<ResponseSlice> =>
+    _get(`/api/dataset/${slot}/contour/${id}/slice/${ax}/${idx}`)
+
+export const getArbitraryContourSlice = (slot: string, id: string, normal: Vec3D, idx: number): Promise<ResponseSlice> =>
+    _get(`/api/dataset/${slot}/contour/${id}/slice/arbitrary/${idx}?nx=${normal[0]}&ny=${normal[1]}&nz=${normal[2]}`)
 
 // get contour nearside surface
 export const getNearside = (slot: string, id: string): Promise<ResponseMesh> => 

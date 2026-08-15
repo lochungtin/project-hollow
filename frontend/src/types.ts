@@ -158,6 +158,10 @@ export type VisDataset = {
     'anchor': Vec3D,
     'outs': { [key: string]: THREE.Object3D },
     'slices': { [key: string]: THREE.Object3D },
+    // contour slice-overlay mode ("M" key): each visible contour's overlay plane
+    // ('contour:{id}') — kept separate from `slices` so setScanVisibility's sweep over the
+    // scan plane doesn't also hide/show these
+    'overlays': { [key: string]: THREE.Object3D },
     'axes': THREE.Object3D | null,
 }
 
