@@ -67,7 +67,7 @@ The included `Dockerfile`/`docker-compose.yml` build the frontend and run the ba
 docker compose up --build
 ```
 
-Then open http://localhost:7000. Stop it with `Ctrl+C` or `docker compose down`.
+Then open http://127.0.0.1:7000. Stop it with `Ctrl+C` or `docker compose down`.
 
 Without Compose:
 

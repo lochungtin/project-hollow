@@ -22,12 +22,12 @@ def main(port):
 
     def run_browser():
         time.sleep(5)
-        webbrowser.open(f"http://localhost:{port}")
+        webbrowser.open(f"http://127.0.0.1:{port}")
 
     threading.Thread(target=run_browser, daemon=True).start()
-    print(f"Project Hollow - Web App starting at http://localhost:{port}")
+    print(f"Project Hollow - Web App starting at http://127.0.0.1:{port}")
 
-    uvicorn.run("app.main:app", host="localhost", port=port, reload=False)
+    uvicorn.run("app.main:app", host="127.0.0.1", port=port, reload=False)
 
 
 if __name__ == "__main__":
