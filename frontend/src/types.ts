@@ -23,6 +23,7 @@ export type AppState = {
     'localAnchorPX': { [key: string]: number[] },
 
     'updateAnchor': (slot: string, anchor: number[], id?: string) => Promise<void>,
+    'resetAnchor': (slot: string) => Promise<void>,
     'updateAlignment': (slot: string, alignment: number[]) => Promise<void>,
     'updateLocalAnchorMM': (slot: string, anchor: number[]) => void,
     'updateLocalAnchorPX': (slot: string, anchor: number[]) => void,
@@ -165,7 +166,6 @@ export type VisDataset = {
 export type SliceState = {
     'mode': SliceMode,
     'idx': { [key: string]: number },
-    'anchor': Vec3D,
     'normal': Vec3D,
 }
 

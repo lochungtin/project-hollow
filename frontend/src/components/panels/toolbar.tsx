@@ -21,10 +21,12 @@ const Toolbar = () => {
                 <span className='toolbar-hints mono'>
                     [Tab] dataset &middot;
                     [D] dual &middot;
+                    [V] 2D grid &middot;
                     [1/2/3] change axis &middot;
                     [4] arbitrary axis &middot;
-                    [M] 2D/3D &middot;
+                    [M] contour overlay &middot;
                     [Wheel] slice &middot;
+                    [&uarr;/&darr;] nudge slice &middot;
                     [Space + Wheel] rotate &middot;
                     [Ctrl + Wheel] zoom &middot;
                     [Enter] flat view &middot;

@@ -18,10 +18,14 @@ class Dataset:
     rotation: np.ndarray = field(default_factory=lambda: np.zeros(3, float))
 
     def __post_init__(self):
+        self.anchor = self.defaultAnchor()
+
+    def defaultAnchor(self) -> np.ndarray:
+        """Returns the scan's own geometric center — the anchor's default/reset position."""
         z, y, x = self.scan.shape
         sZ, sY, sX = self.scan.spacing
         oX, oY, oZ = self.scan.origin
-        self.anchor = np.asarray(
+        return np.asarray(
             [oX + (x - 1) * sX / 2, oY + (y - 1) * sY / 2, oZ + (z - 1) * sZ / 2]
         )
 

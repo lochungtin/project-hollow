@@ -26,6 +26,7 @@ export default class SceneManager {
     private resizeObserver
 
     private frameHandle = 0
+    private paused = false
 
     private arbitraryAxis: THREE.Line | null = null
 
@@ -78,6 +79,18 @@ export default class SceneManager {
     private _animate() {
         this.frameHandle = requestAnimationFrame(this._animate)
         this.renderer.render(this.scene, this.camera)
+    }
+
+    /** Stops (or resumes) the render loop entirely — used when the 3D view is hidden behind the 2D grid, so it isn't rendered every frame for nothing. */
+    setPaused(paused: boolean) {
+        if (this.paused === paused)
+            return
+
+        this.paused = paused
+        if (paused)
+            cancelAnimationFrame(this.frameHandle)
+        else
+            this.frameHandle = requestAnimationFrame(this._animate)
     }
 
     /** Tears down the renderer, observers, and all scene content. */

@@ -142,9 +142,14 @@ const ContentLoaded = ({ slot }: { slot: string }) => {
         const current = state.dataset[slot]?.contours[id].visible
         state.updateVisibility(slot, 'contour', !current, id)
     }
-    /** Sets a contour's center of mass as the dataset's anchor. */
+    /** Sets a contour's center of mass as the dataset's anchor, or — if it's already the anchor — reverts to the scan's own geometric center. */
     const _onClickContourAnchor = (e: React.MouseEvent, slot: string, id: string) => {
         console.log('_onClickContourAnchor', slot, id)
+
+        if ((state.dataset[slot] as Dataset).anchorID === id) {
+            state.resetAnchor(slot)
+            return
+        }
 
         const current = (state.dataset[slot] as Dataset).contours[id].center_of_mass
         state.updateAnchor(slot, current, id)
