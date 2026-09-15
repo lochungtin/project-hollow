@@ -79,6 +79,9 @@ export const updateAnchorAPI = (slot: string, anchor: number[], id: string): Pro
     return _put(`/api/dataset/${slot}/anchor`, payload)
 }
 
+/** Reverts the dataset's anchor to the scan's own geometric center. Resets alignment to zero server-side, same as pinning a new anchor. */
+export const resetAnchorAPI = (slot: string): Promise<Dataset> => _del(`/api/dataset/${slot}/anchor`)
+
 /** Manually translates the dataset relative to world origin (mm). */
 export const updateAlignmentAPI = (slot: string, alignment: number[]): Promise<Dataset> => {
     const payload = {"x": alignment[0], "y": alignment[1], "z": alignment[2]}

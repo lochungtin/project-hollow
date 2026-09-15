@@ -1,4 +1,5 @@
 import base64
+import math
 from dataclasses import dataclass
 from io import BytesIO
 from typing import Literal
@@ -34,12 +35,35 @@ class Slice:
         }
 
 
-def _orthogonalGeometry(scan: Scan, ax: Axis, idx: int) -> tuple[int, Vec3, Vec3, Vec3, float, float]:
-    """Compute a cardinal-axis slice's clamped index, center, dU/dV, and in-plane dimensions."""
+def _cardinalAnchorIdx(scan: Scan, ax: Axis, anchor: Vec3) -> int:
+    """Returns the array index nearest `anchor` along a cardinal axis's scanning direction.
+
+    Uses round-half-up (not Python's banker's-rounding `round()`) so this stays in lockstep with
+    the frontend's `cardinalAnchorIdx` (scan.ts), which uses `Math.round` (rounds half toward
+    +Infinity) — for an anchor sitting exactly half a voxel off-grid, mismatched rounding would
+    desync the client's idx bounds from what this endpoint actually serves at the boundary.
+    """
+    sZ, sY, sX = scan.spacing
+    oX, oY, oZ = scan.origin
+    aX, aY, aZ = anchor
+    raw = {"axial": (aZ - oZ) / sZ, "coronal": (aY - oY) / sY, "sagittal": (aX - oX) / sX}[ax]
+    return math.floor(raw + 0.5)
+
+
+def _orthogonalGeometry(
+    scan: Scan, ax: Axis, idx: int, anchor: Vec3
+) -> tuple[int, Vec3, Vec3, Vec3, float, float]:
+    """Compute a cardinal-axis slice's clamped index, center, dU/dV, and in-plane dimensions.
+
+    `idx` is anchor-relative (0 = the slice through `anchor`, matching the arbitrary-axis
+    convention), not a raw array index — it's remapped to the nearest actual array index (via
+    `_cardinalAnchorIdx`) before being clamped to the scan's own bounds.
+    """
     z, y, x = scan.shape
     sZ, sY, sX = scan.spacing
     oX, oY, oZ = scan.origin
-    idx = max(0, min(idx, {"axial": z, "coronal": y, "sagittal": x}[ax] - 1))
+    dim = {"axial": z, "coronal": y, "sagittal": x}[ax]
+    idx = max(0, min(_cardinalAnchorIdx(scan, ax, anchor) + idx, dim - 1))
 
     shX = (x - 1) * sX
     shY = (y - 1) * sY
@@ -75,16 +99,16 @@ def _orthogonalSlice(array: np.ndarray, ax: Axis, idx: int) -> np.ndarray:
         return array[:, :, idx]
 
 
-def orthogonal(scan: Scan, ax: Axis, idx: int) -> Slice:
+def orthogonal(scan: Scan, ax: Axis, idx: int, anchor: Vec3) -> Slice:
     """Extract a grayscale cardinal-axis slice of the scan as a `Slice`."""
-    idx, c, dU, dV, width, height = _orthogonalGeometry(scan, ax, idx)
+    idx, c, dU, dV, width, height = _orthogonalGeometry(scan, ax, idx, anchor)
     img = _orthogonalSlice(scan.array, ax, idx)
     return Slice(url=_toURL(img), center=c, dU=dU, dV=dV, width=width, height=height)
 
 
-def orthogonalMask(scan: Scan, mask: np.ndarray, color: Color, ax: Axis, idx: int) -> Slice:
+def orthogonalMask(scan: Scan, mask: np.ndarray, color: Color, ax: Axis, idx: int, anchor: Vec3) -> Slice:
     """Extract a cardinal-axis cross-section of a boolean mask as a flat-colored `Slice`."""
-    idx, c, dU, dV, width, height = _orthogonalGeometry(scan, ax, idx)
+    idx, c, dU, dV, width, height = _orthogonalGeometry(scan, ax, idx, anchor)
     img = _orthogonalSlice(mask, ax, idx)
     return Slice(
         url=_maskToURL(img, color), center=c, dU=dU, dV=dV, width=width, height=height
@@ -255,10 +279,10 @@ def _fieldToURL(mask: np.ndarray, field: np.ndarray, vmin: float, vmax: float) -
 
 
 def orthogonalScalarMask(
-    scan: Scan, mask: np.ndarray, field: np.ndarray, vmin: float, vmax: float, ax: Axis, idx: int
+    scan: Scan, mask: np.ndarray, field: np.ndarray, vmin: float, vmax: float, ax: Axis, idx: int, anchor: Vec3
 ) -> Slice:
     """Extract a cardinal-axis cross-section of a mask, colored by a scalar `field`, as a `Slice`."""
-    idx, c, dU, dV, width, height = _orthogonalGeometry(scan, ax, idx)
+    idx, c, dU, dV, width, height = _orthogonalGeometry(scan, ax, idx, anchor)
     maskImg = _orthogonalSlice(mask, ax, idx)
     fieldImg = _orthogonalSlice(field, ax, idx)
     return Slice(

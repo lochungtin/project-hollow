@@ -22,7 +22,7 @@ Two independent datasets can be loaded at once into fixed "slots" — `A` and `B
 - `app/api/` — FastAPI routers:
   - `dataset.py` — dataset CRUD (`/api/dataset/...`): DICOM/RTStruct upload, cardinal + arbitrary-axis slice extraction, contour mesh fetch, contour 2D slice-overlay fetch, distance-map (DMap) mesh/slice fetch, visibility, target ROI, and anchor/alignment updates. Each mutating endpoint returns the full `Dataset.summary()` so the frontend can just replace its local copy. Result-invalidation is wired in here (not in `guava.py`): dataset upload/delete clears all 5 cached results, target change clears `divh`/`sepd`/`sepdn`, anchor change clears `disp`. Every `.../slice/arbitrary/{idx}` route (scan, contour, and DMap) is registered *before* its sibling generic `.../slice/{ax}/{idx}` route, since `{ax}` would otherwise also match the literal `"arbitrary"` segment.
   - `guava.py` — `/api/guava/...`: device info, cached results rehydration, and `queue/{job}` to launch a named GUAVA operation (`bsd`, `disp`, `sepd`, `divh`, `sepdn` — see `JOB_LIST`).
-  - `websocket.py` — `/ws` endpoint; pushes job queue updates to all connected clients. Also implements an idle-shutdown timer (currently commented out) that would exit the process after all clients disconnect — this is a local single-user app, not a multi-tenant server.
+  - `websocket.py` — `/ws` endpoint; pushes job queue updates to all connected clients. Also implements an idle-shutdown timer: once `ACTIVE_CONNECTIONS` drops to 0 (and at least one client had ever connected), it waits 5s and then `os._exit(0)`s the process if still at 0 — cancelled if a client reconnects within that window. This is a local single-user app, not a multi-tenant server, so exiting when the last tab closes frees the GPU/CPU between sessions; `docker-compose.yml`'s `restart: unless-stopped` brings the container right back for the next visit.
   - `payload.py` — Pydantic request bodies.
 - `app/models/` — Dataclasses, not ORM models: `Scan` (voxel array + spacing/origin/modality), `Dataset` (per-slot scan + contours + anchor/alignment/target state — see the anchor/alignment model below), `Contour` (name/color/mask/mesh/center_of_mass), `Mesh` (marching-cubes vertices/faces, in absolute patient-space mm), `Job` (queue job state), and `image.py`:
   - `orthogonal()`/`arbitrary()` — cardinal/freeform-plane grayscale scan slices (`arbitrary()` via `scipy.ndimage.map_coordinates` trilinear interpolation), returning a `Slice` (base64 PNG data URL plus the plane's `center`/`dU`/`dV`/`width`/`height` for the frontend to texture-map onto a plane).
@@ -81,7 +81,13 @@ npm run preview
 ```
 No test suite currently exists. `npm run build` runs the TypeScript project build (`tsc -b`) first, so it doubles as a type-check.
 
+### Docker
+```bash
+docker compose up --build     # builds frontend + backend into one image, runs on :7000
+docker compose down
+```
+`docker-compose.yml` requests an NVIDIA GPU by default (`deploy.resources.reservations.devices`) via the NVIDIA Container Toolkit; remove that block if the host has no GPU/toolkit — `guava_rt` falls back to CPU automatically. Without Compose: `docker build -t hollow .` then `docker run -p 7000:7000 [--gpus all] hollow`. The multi-stage `Dockerfile` builds the frontend with `node:20-slim` and runs the backend with `python:3.12-slim`, copying `frontend/dist` into the image (same static-mount path as `run.py` locally). The container's `restart: unless-stopped` pairs with the backend's idle-shutdown (see `websocket.py` above) to free GPU/CPU between sessions and come back for the next visit.
+
 ## Notes
 
 - `guava_rt` (https://pypi.org/project/guava-rt/) is an external dependency (device-aware: CUDA if available, else CPU — see `storage.getDevice`). Its API surface (`gv.Mask`, `gv.Region`, `gv.Metrics`) is used but not defined in this repo — `gv.Mask.center_of_mass` in particular returns raw voxel indices, not a usable coordinate (see `parser.toContourObjs`), and `gv.Mask.dmap()`/`sdmap()` (unsigned Euclidean distance transforms, self-caching per `Mask` instance) back both `gv.Region.target_dmap` and this app's own DMap visualization (see above).
-- `plans/` contains design docs (`specification.md` is the SRS, `roadmap.md`/`plan_v0.md`/`plan_v1.md`/`plan_v2.md`/`temp.md` phase/iteration plans) — check these for intended behavior when a feature seems underspecified in code, but treat them as historical/aspirational rather than a guarantee of current implementation state.

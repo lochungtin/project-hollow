@@ -7,11 +7,46 @@ const loader = new THREE.TextureLoader()
 const AXIS_DU: { [key in Axis]: Vec3D } = { axial: [1, 0, 0], coronal: [1, 0, 0], sagittal: [0, 1, 0] }
 const AXIS_DV: { [key in Axis]: Vec3D } = { axial: [0, -1, 0], coronal: [0, 0, -1], sagittal: [0, 0, -1] }
 
-/** Computes a cardinal-axis slice's plane geometry (center/basis/extent), without clamping `idx` to the scan's valid range. */
-export const sliceGeometry = (scan: Scan, ax: Axis, idx: number): Omit<ResponseSlice, 'url'> => {
+/**
+ * Returns the array index nearest `anchor` along a cardinal axis's scanning direction.
+ *
+ * Uses round-half-up (`floor(x + 0.5)`, not e.g. `Math.round` left implicit) so this stays in
+ * lockstep with the backend's `_cardinalAnchorIdx` (image.py), which uses the same explicit
+ * formula rather than Python's banker's-rounding `round()` — for an anchor sitting exactly half
+ * a voxel off-grid, mismatched rounding would desync this client's idx bounds from what the
+ * backend actually serves at the boundary.
+ */
+export const cardinalAnchorIdx = (scan: Scan, anchor: Vec3D, ax: Axis): number => {
+    const [sZ, sY, sX] = scan.spacing
+    const [oX, oY, oZ] = scan.origin
+    const [aX, aY, aZ] = anchor
+
+    const raw = { axial: (aZ - oZ) / sZ, coronal: (aY - oY) / sY, sagittal: (aX - oX) / sX }[ax]
+    return Math.floor(raw + 0.5)
+}
+
+/** Returns a cardinal axis's array length (its `scan.shape` component). */
+export const cardinalDim = (scan: Scan, ax: Axis): number =>
+    ({ axial: scan.shape[0], coronal: scan.shape[1], sagittal: scan.shape[2] }[ax])
+
+/** Returns the inclusive `[min, max]` bounds for a cardinal axis's anchor-relative `idx` — asymmetric whenever the anchor isn't at the array's own center index. Mirrors `arbitraryMaxIdx`'s role for arbitrary mode. */
+export const cardinalIdxRange = (scan: Scan, anchor: Vec3D, ax: Axis): { min: number, max: number } => {
+    const anchorIdx = cardinalAnchorIdx(scan, anchor, ax)
+    return { min: -anchorIdx, max: cardinalDim(scan, ax) - 1 - anchorIdx }
+}
+
+/**
+ * Computes a cardinal-axis slice's plane geometry (center/basis/extent), without clamping `idx`
+ * to the scan's valid range. `idx` is anchor-relative (0 = the slice through `anchor`, matching
+ * the arbitrary-axis convention) — it's remapped to the (deliberately unclamped) nearest array
+ * index here so an out-of-range idx still extrapolates to the geometrically-correct position
+ * beyond the volume edge, for the black-placeholder plane.
+ */
+export const sliceGeometry = (scan: Scan, ax: Axis, idx: number, anchor: Vec3D): Omit<ResponseSlice, 'url'> => {
     const [, y, x] = scan.shape
     const [sZ, sY, sX] = scan.spacing
     const [oX, oY, oZ] = scan.origin
+    const arrayIdx = cardinalAnchorIdx(scan, anchor, ax) + idx
 
     const shX = (x - 1) * sX
     const shY = (y - 1) * sY
@@ -28,9 +63,9 @@ export const sliceGeometry = (scan: Scan, ax: Axis, idx: number): Omit<ResponseS
     const cZ = oZ + shZ / 2
 
     const center: { [key in Axis]: Vec3D } = {
-        axial: [cX, cY, oZ + idx * sZ],
-        coronal: [cX, oY + idx * sY, cZ],
-        sagittal: [oX + idx * sX, cY, cZ],
+        axial: [cX, cY, oZ + arrayIdx * sZ],
+        coronal: [cX, oY + arrayIdx * sY, cZ],
+        sagittal: [oX + arrayIdx * sX, cY, cZ],
     }
 
     return {

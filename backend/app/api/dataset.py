@@ -124,6 +124,17 @@ def updateAnchor(slot: str, body: AnchorPayload) -> dict:
     return dataset.summary()
 
 
+@router.delete("/{slot}/anchor")
+def resetAnchor(slot: str) -> dict:
+    """Revert `slot`'s anchor to the scan's own geometric center and reset its alignment to zero."""
+    dataset = getDataset(slot)
+    dataset.anchorID = "unknown"
+    dataset.anchor = dataset.defaultAnchor()
+    dataset.alignment = np.zeros(3, dtype=float)
+    clearResults("disp")
+    return dataset.summary()
+
+
 @router.put("/{slot}/alignment")
 def updateAlignment(slot: str, body: AlignmentPayload) -> dict:
     """Set `slot`'s manual world-origin offset."""
@@ -143,7 +154,7 @@ def getArbitrarySlice(slot: str, idx: int, nx: float, ny: float, nz: float) -> d
 def getOrthogonal(slot: str, ax: Axis, idx: int) -> dict:
     """Return a grayscale cardinal-axis scan slice."""
     dataset = getDataset(slot)
-    return orthogonal(dataset.scan, ax, idx).summary()
+    return orthogonal(dataset.scan, ax, idx, dataset.anchor).summary()
 
 
 @router.get("/{slot}/contour/{id}")
@@ -178,7 +189,7 @@ def getContourSlice(slot: str, id: str, ax: Axis, idx: int) -> dict:
 
     contour = dataset.contours[id]
     mask = contour.mask.mask.cpu().numpy()
-    return orthogonalMask(dataset.scan, mask, contour.color, ax, idx).summary()
+    return orthogonalMask(dataset.scan, mask, contour.color, ax, idx, dataset.anchor).summary()
 
 
 def _targetDMapField(dataset: Dataset) -> np.ndarray:
@@ -252,7 +263,7 @@ def getContourDMapSlice(slot: str, id: str, ax: Axis, idx: int) -> dict:
     mask = contour.mask.mask.cpu().numpy()
     vmin, vmax = _globalDMapRange(dataset, field)
 
-    return orthogonalScalarMask(dataset.scan, mask, field, vmin, vmax, ax, idx).summary()
+    return orthogonalScalarMask(dataset.scan, mask, field, vmin, vmax, ax, idx, dataset.anchor).summary()
 
 
 @router.get("/{slot}/nearside/{id}")

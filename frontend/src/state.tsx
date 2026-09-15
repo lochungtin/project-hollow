@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import { deleteDatasetAPI, getDeviceAPI, getDiVHAPI, rehydrateDatasetAPI, rehydrateResultsAPI, triggerGuavaOpAPI, updateAlignmentAPI, updateAnchorAPI, updateTargetAPI, updateVisibilityAPI, uploadDicomAPI, uploadRTStructAPI } from './api/client'
+import { deleteDatasetAPI, getDeviceAPI, getDiVHAPI, rehydrateDatasetAPI, rehydrateResultsAPI, resetAnchorAPI, triggerGuavaOpAPI, updateAlignmentAPI, updateAnchorAPI, updateTargetAPI, updateVisibilityAPI, uploadDicomAPI, uploadRTStructAPI } from './api/client'
 import { socket } from './api/websocket'
 import { AppState, Dataset, Job, ResponseDiVHSingle, ResultStore, SelectedContour } from './types'
 
@@ -181,6 +181,23 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 		}
 	}, [])
 
+	/** Reverts a slot's anchor to the scan's own geometric center and clears the now-stale displacement result. */
+	const resetAnchor = useCallback(async (slot: string) => {
+		try {
+			const ds = await resetAnchorAPI(slot)
+
+			const { mm, px } = _localAnchorFromAlignment(ds.alignment, ds.scan.spacing)
+
+			setDataset((prev) => ({ ...prev, [slot]: ds }))
+			setLocalAnchorMM((prev) => ({ ...prev, [slot]: mm }))
+			setLocalAnchorPX((prev) => ({ ...prev, [slot]: px }))
+			setResults((prev) => ({ ...prev, disp: {} }))
+
+		} catch (err) {
+			console.error(JSON.stringify(err))
+		}
+	}, [])
+
 	/** Manually translates a slot's dataset relative to world origin. */
 	const updateAlignment = useCallback(async (slot: string, alignment: number[]) => {
 		try {
@@ -278,7 +295,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 		uploadDicom, uploadRTStruct, deleteDataset,
 		updateVisibility,
 		updateLocalAnchorMM, updateLocalAnchorPX,
-		updateAnchor, updateAlignment, localAnchorMM, localAnchorPX,
+		updateAnchor, resetAnchor, updateAlignment, localAnchorMM, localAnchorPX,
 		updateTarget,
 		selected, toggleContourSelect,
 		dmapContours, toggleContourDMap,
@@ -292,7 +309,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 		uploadDicom, uploadRTStruct, deleteDataset,
 		updateVisibility,
 		updateLocalAnchorMM, updateLocalAnchorPX,
-		updateAnchor, updateAlignment, localAnchorMM, localAnchorPX,
+		updateAnchor, resetAnchor, updateAlignment, localAnchorMM, localAnchorPX,
 		updateTarget,
 		selected, toggleContourSelect,
 		dmapContours, toggleContourDMap,
