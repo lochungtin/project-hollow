@@ -14,7 +14,7 @@ from ..models.image import (
     orthogonalScalarMask,
     sampleField,
 )
-from ..parser import toContourObjs, toScanObj
+from ..parser import findRTStructBytes, toContourObjs, toScanObj
 from ..storage import (
     clearDataset,
     clearGuavaStore,
@@ -41,9 +41,24 @@ def rehydrateDataset() -> dict:
     }
 
 
+def _attachRTStruct(slot: str, dataset: Dataset, content: bytes) -> None:
+    """Parses `content` as an RTSTRUCT, attaches its contours to `dataset`, and registers their masks with GUAVA."""
+    gvStore = getGuavaStore()
+    contours = toContourObjs(slot, content, dataset.scan)
+    dataset.contours = contours
+
+    for c in contours.values():
+        gvStore["masks"][slot][c.name] = c.mask
+
+
 @router.post("/{slot}/dicom")
 async def uploadDicom(slot: str, files: list[UploadFile]) -> dict:
-    """Parse an uploaded DICOM series into a new `Dataset` for `slot`, replacing any prior one."""
+    """Parse an uploaded DICOM series into a new `Dataset` for `slot`, replacing any prior one.
+
+    If an RTSTRUCT file is included among the upload, it's detected and parsed automatically too,
+    so a separate manual RTSTRUCT upload isn't needed — a failure to parse it doesn't block the
+    series upload itself, since the scan is the primary thing being requested here.
+    """
     contents = [await f.read() for f in files]
     try:
         scan = toScanObj(contents)
@@ -52,6 +67,13 @@ async def uploadDicom(slot: str, files: list[UploadFile]) -> dict:
 
     except Exception as exc:
         raise HTTPException(400, f"Error: load dicom series failed: {exc}")
+
+    rtstructBytes = findRTStructBytes(contents)
+    if rtstructBytes is not None:
+        try:
+            _attachRTStruct(slot, dataset, rtstructBytes)
+        except Exception as exc:
+            print(f"[UPLOAD]\tAuto-detected RTSTRUCT failed to parse for slot {slot}: {exc}")
 
     clearResults(*ALL_RESULTS)
     return dataset.summary()
@@ -62,17 +84,11 @@ async def uploadRTStruct(slot: str, file: UploadFile) -> dict:
     """Parse an uploaded RTSTRUCT into `slot`'s dataset and register its masks with GUAVA."""
     content = await file.read()
     dataset = getDataset(slot)
-    gvStore = getGuavaStore()
     try:
-        contours = toContourObjs(slot, content, dataset.scan)
-        dataset.contours = contours
-
-        for c in contours.values():
-            gvStore["masks"][slot][c.name] = c.mask
-
+        _attachRTStruct(slot, dataset, content)
     except Exception as exc:
         raise HTTPException(400, f"Error: error while loading rt struct: {exc}")
-    if not contours:
+    if not dataset.contours:
         raise HTTPException(400, "Error: no structures found in uploaded struct file.")
 
     clearResults(*ALL_RESULTS)

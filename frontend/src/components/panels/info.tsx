@@ -49,7 +49,7 @@ const ContentEmpty = ({ slot }: { slot: string }) => {
                 />
             </main>
             <footer className='info-card-footer'>
-                Select every file in the dicom series.
+                Select every file in the dicom series — an included RTSTRUCT is loaded automatically.
             </footer>
         </>
     )

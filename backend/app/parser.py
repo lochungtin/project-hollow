@@ -25,6 +25,22 @@ def _byteToSlices(filesBytes: list[bytes]) -> list[dcm.FileDataset]:
     return [d for d in rt if hasattr(d, "PixelData")]
 
 
+def findRTStructBytes(filesBytes: list[bytes]) -> bytes | None:
+    """Returns the raw bytes of the first RTSTRUCT file among `filesBytes`, or `None` if none is present.
+
+    Used to auto-detect an RTSTRUCT included alongside a DICOM series upload, so it can be parsed
+    in the same request instead of requiring a separate manual RTSTRUCT upload step.
+    """
+    for b in filesBytes:
+        try:
+            d = dcm.dcmread(BytesIO(b), force=True)
+        except Exception:
+            continue
+        if str(getattr(d, "Modality", "")) == "RTSTRUCT":
+            return b
+    return None
+
+
 def _sortSlices(raw: list[dcm.FileDataset]) -> list[dict[str, Any]]:
     """Sort raw DICOM slices along their shared volume normal, derived from orientation."""
     iop = getattr(raw[0], "ImageOrientationPatient", [1, 0, 0, 0, 1, 0])
